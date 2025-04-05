@@ -1,7 +1,7 @@
 <?php
 
-use App\Models\Employee;
-use App\Models\SchoolStage;
+use App\Models\Specialization;
+use App\Models\Subject;
 use App\Models\Teacher;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
@@ -14,14 +14,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('schools', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
+        Schema::create('subject_teacher', function (Blueprint $table) {
+            $table->foreignIdFor(Subject::class)->constrained();
             $table->foreignIdFor(Teacher::class)->constrained();
-            $table->foreignIdFor(SchoolStage::class)->constrained();
-            $table->string('address');
-            $table->string('description');
-            $table->timestamps();
+            $table->primary(['subject_id', 'teacher_id']);
         });
     }
 
@@ -30,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('schools');
+        Schema::dropIfExists('subject_teacher');
     }
 };

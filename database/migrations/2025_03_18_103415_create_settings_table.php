@@ -15,7 +15,7 @@ class CreateSettingsTable extends Migration
             $table->string('state');
             $table->string('city');
             $table->string('logo')->nullable(); // Stores the path/filename of the logo
-            $table->timestamps();
+            // $table->timestamps();
         });
     }
 

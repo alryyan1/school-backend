@@ -1,8 +1,7 @@
 <?php
 
 use App\Models\GradeLevel;
-use App\Models\SchoolStage;
-use App\Models\Student;
+use App\Models\Subject;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -14,10 +13,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('enrollments', function (Blueprint $table) {
+        Schema::create('grade_level_subjects_table', function (Blueprint $table) {
             $table->id();
-            $table->foreignIdFor(Student::class)->constrained();
             $table->foreignIdFor(GradeLevel::class)->constrained();
+            $table->foreignIdFor(Subject::class)->constrained();
             $table->timestamps();
         });
     }
@@ -27,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('enrollments');
+        Schema::dropIfExists('grade_level_subjects_table');
     }
 };

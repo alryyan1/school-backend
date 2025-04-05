@@ -15,10 +15,11 @@ class CreateClassroomsTable extends Migration
     {
         Schema::create('classrooms', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
-            $table->text('description')->nullable();
+            $table->string('name'); // e.g., "Class 10-A"
             $table->foreignIdFor(GradeLevel::class)->constrained();
-            // $table->foreignIdFor(School::class)->constrained();
+            $table->foreignIdFor(Teacher::class)->nullable()->constrained('teachers'); // Homeroom teacher
+            $table->integer('capacity')->default(30);
+            $table->foreignIdFor(School::class)->constrained();
             $table->timestamps();
         });
     }

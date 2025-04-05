@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\School;
+use App\Models\StudentAcademicYear;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -12,12 +12,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('grade_levels', function (Blueprint $table) {
+        Schema::create('student_fee_payments', function (Blueprint $table) {
             $table->id();
-            $table->string('name'); // e.g., "Grade 10"
-            $table->string('code')->unique(); // e.g., "G10"
-            $table->text('description')->nullable();
-            // $table->foreignIdFor(School::class)->constrained();
+            $table->foreignIdFor(StudentAcademicYear::class)->constrained(); // ربط بالتسجيل في السنة
+            $table->decimal('amount', 10, 2);
+            $table->date('payment_date');
+            $table->text('notes')->nullable();
             $table->timestamps();
         });
     }
@@ -27,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('grade_levels');
+        Schema::dropIfExists('student_fee_payments');
     }
 };

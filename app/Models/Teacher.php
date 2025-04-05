@@ -11,12 +11,23 @@ class Teacher extends Model
     use HasFactory;
 
     protected $fillable = [
+        'national_id',
         'name',
-        'last_name',
         'email',
-        'phone_number',
+        'phone',
+        'gender',
+        'birth_date',
+        'qualification',
+        'hire_date',
         'address',
-        'specialization',
+        'photo', // Path to photo
+        'is_active',
+    ];
+
+    protected $casts = [
+        'birth_date' => 'date:Y-m-d', // Cast to date, format on serialization
+        'hire_date' => 'date:Y-m-d',  // Cast to date, format on serialization
+        'is_active' => 'boolean',
     ];
 
 

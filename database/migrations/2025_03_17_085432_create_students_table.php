@@ -27,8 +27,8 @@ class CreateStudentsTable extends Migration
             $table->string('email')->nullable();
             $table->date('date_of_birth');
             $table->enum('gender',['ذكر','انثي']);
-            $table->string('closest_name')->nullable();
-            $table->string('closest_phone')->nullable();
+            // $table->string('closest_name')->nullable();
+            // $table->string('closest_phone')->nullable();
             $table->string('referred_school')->nullable();
             $table->string('success_percentage')->nullable();
             $table->string('medical_condition')->nullable();

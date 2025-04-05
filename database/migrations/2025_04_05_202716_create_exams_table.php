@@ -12,12 +12,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('grade_levels', function (Blueprint $table) {
+        Schema::create('exams', function (Blueprint $table) {
             $table->id();
-            $table->string('name'); // e.g., "Grade 10"
-            $table->string('code')->unique(); // e.g., "G10"
+            $table->string('name'); // e.g., "Midterm Exams 2024"
+            $table->foreignIdFor(School::class)->constrained();
+            $table->date('start_date');
+            $table->date('end_date');
             $table->text('description')->nullable();
-            // $table->foreignIdFor(School::class)->constrained();
             $table->timestamps();
         });
     }
@@ -27,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('grade_levels');
+        Schema::dropIfExists('exams');
     }
 };

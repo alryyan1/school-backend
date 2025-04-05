@@ -5,6 +5,7 @@ use App\Http\Controllers\StudentController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\VerificationController;
+use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\UserController;
 
 /*
@@ -55,3 +56,5 @@ Route::middleware('auth:sanctum')->get('/dashboard-stats', function () {
 
 Route::middleware('auth:sanctum')->get('/auth/verify', [VerificationController::class, 'verify']);
 Route::apiResource('/students', StudentController::class);
+
+Route::apiResource('/teachers',TeacherController::class);

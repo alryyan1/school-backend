@@ -1,6 +1,6 @@
 <?php
 
-use App\Models\Specialization;
+use App\Models\Classroom;
 use App\Models\Subject;
 use App\Models\Teacher;
 use Illuminate\Database\Migrations\Migration;
@@ -14,10 +14,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('teacher_subjects', function (Blueprint $table) {
+        Schema::create('timetables', function (Blueprint $table) {
             $table->id();
-            $table->foreignIdFor(Teacher::class)->constrained();
+            $table->foreignIdFor(Classroom::class)->constrained();
             $table->foreignIdFor(Subject::class)->constrained();
+            $table->foreignIdFor(Teacher::class)->constrained();
+            $table->enum('day', ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']);
+            $table->time('start_time');
+            $table->time('end_time');
             $table->timestamps();
         });
     }
@@ -27,6 +31,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('teacher_subjects');
+        Schema::dropIfExists('timetables');
     }
 };
