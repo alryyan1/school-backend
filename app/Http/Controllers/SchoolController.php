@@ -1,104 +1,147 @@
 <?php
-// app/Http/Controllers/SchoolController.php
 
 namespace App\Http\Controllers;
 
 use App\Models\School;
 use Illuminate\Http\Request;
+use App\Http\Resources\SchoolResource; // Import resource
 use Illuminate\Support\Facades\Validator;
-use App\Http\Resources\SchoolResource;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Storage; // Import Storage
+use Illuminate\Validation\Rule; // For unique validation on update
 
 class SchoolController extends Controller
 {
+    /**
+     * Display a listing of the resource.
+     */
     public function index()
     {
-        $schools = School::all();
-        return SchoolResource::collection($schools);
+        // Optional: Authorization check
+        // $this->authorize('viewAny', School::class);
+
+         // Get all schools, ordered if desired
+         $schools = School::latest()->get(); // Use get() instead of paginate()
+
+         // Return a resource collection (still good practice for consistent format)
+         return SchoolResource::collection($schools);
     }
 
+    /**
+     * Store a newly created resource in storage.
+     */
     public function store(Request $request)
     {
+        // Optional: Authorization check
+        // $this->authorize('create', School::class);
+
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048', // If you want to allow logo uploads here
-            'basic_info' => 'nullable|string',
+            'code' => 'required|string|max:50|unique:schools,code',
+            'address' => 'required|string|max:255',
+            'phone' => 'required|string|max:20',
+            'email' => 'required|email|max:255|unique:schools,email',
+            'principal_name' => 'nullable|string|max:255',
+            'establishment_date' => 'nullable|date_format:Y-m-d',
+            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // Logo validation
+            // 'is_active' => 'sometimes|boolean', // Uncomment if added later
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+            return response()->json(['message' => 'خطأ في التحقق من البيانات', 'errors' => $validator->errors()], 422);
         }
 
-        $data = $request->all();
+        $validatedData = $validator->validated();
+        $logoPath = null;
 
+        // Handle Logo Upload
         if ($request->hasFile('logo')) {
-            $logo = $request->file('logo');
-            $filename = time() . '.' . $logo->getClientOriginalExtension();
-            $path = $logo->storeAs('schools', $filename, 'public');
-            $data['logo'] = $path;
+            // Store in 'public/schools_logos' directory
+            $logoPath = $request->file('logo')->store('schools_logos', 'public');
+            $validatedData['logo'] = $logoPath;
         }
 
-        $school = School::create($data);
+        // Uncomment and handle if is_active is added
+        // $validatedData['is_active'] = $request->boolean('is_active', true);
 
-        return new SchoolResource($school);
+        $school = School::create($validatedData);
+
+        return new SchoolResource($school); // 201 status implicit
     }
 
-    public function show(School $school)
+    /**
+     * Display the specified resource.
+     */
+    public function show(School $school) // Route model binding
     {
-        if (!$school) {
-            return response()->json(['message' => 'School not found'], 404);
-        }
+        // Optional: Authorization check
+        // $this->authorize('view', $school);
         return new SchoolResource($school);
     }
 
+    /**
+     * Update the specified resource in storage.
+     */
     public function update(Request $request, School $school)
     {
-         if (!$school) {
-            return response()->json(['message' => 'School not found'], 404);
-        }
+        // Optional: Authorization check
+        // $this->authorize('update', $school);
 
         $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
-            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-            'basic_info' => 'nullable|string',
+            'name' => 'sometimes|required|string|max:255',
+            'code' => ['sometimes', 'required', 'string', 'max:50', Rule::unique('schools')->ignore($school->id)],
+            'address' => 'sometimes|required|string|max:255',
+            'phone' => 'sometimes|required|string|max:20',
+            'email' => ['sometimes', 'required', 'email', 'max:255', Rule::unique('schools')->ignore($school->id)],
+            'principal_name' => 'nullable|string|max:255',
+            'establishment_date' => 'nullable|date_format:Y-m-d',
+            'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // Validate new logo
+            // 'is_active' => 'sometimes|boolean', // Uncomment if added later
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
+            return response()->json(['message' => 'خطأ في التحقق من البيانات', 'errors' => $validator->errors()], 422);
         }
 
-        $data = $request->all();
+        $validatedData = $validator->validated();
+        $logoPath = $school->logo; // Keep old path by default
 
+        // Handle Logo Update
         if ($request->hasFile('logo')) {
-            // Delete the old logo if it exists
+            // Delete old logo if it exists
             if ($school->logo) {
                 Storage::disk('public')->delete($school->logo);
             }
-
-            $logo = $request->file('logo');
-            $filename = time() . '.' . $logo->getClientOriginalExtension();
-            $path = $logo->storeAs('schools', $filename, 'public');
-            $data['logo'] = $path;
+            // Store new logo
+            $logoPath = $request->file('logo')->store('schools_logos', 'public');
+            $validatedData['logo'] = $logoPath;
         }
 
-        $school->update($data);
+        // Uncomment and handle if is_active is added
+        // if ($request->has('is_active')) {
+        //     $validatedData['is_active'] = $request->boolean('is_active');
+        // }
 
-        return new SchoolResource($school);
+        $school->update($validatedData);
+
+        return new SchoolResource($school->fresh()); // Return updated resource
     }
 
+    /**
+     * Remove the specified resource from storage.
+     */
     public function destroy(School $school)
     {
-         if (!$school) {
-            return response()->json(['message' => 'School not found'], 404);
-        }
+        // Optional: Authorization check
+        // $this->authorize('delete', $school);
 
-        // Delete the logo if it exists
+        // Delete logo file if it exists
         if ($school->logo) {
             Storage::disk('public')->delete($school->logo);
         }
 
-        $school->delete();
+        $school->delete(); // Performs soft delete if trait is used & column exists
 
-        return response()->json(['message' => 'School deleted'], 204);
+        return response()->json(['message' => 'تم حذف المدرسة بنجاح'], 200);
+        // return response()->noContent(); // Alternative 204 response
     }
 }

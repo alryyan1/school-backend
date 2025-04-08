@@ -62,6 +62,8 @@ class Handler extends ExceptionHandler
 
         $response = [
             'message' => $e->getMessage() ?: 'Sorry, something went wrong.',
+            'line'=>$e->getLine(),
+            'file'=>$e->getFile(),
         ];
 
         // Optionally include the exception's stack trace in development environments

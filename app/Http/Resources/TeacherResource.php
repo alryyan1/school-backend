@@ -16,7 +16,7 @@ class TeacherResource extends JsonResource
     public function toArray(Request $request): array
     {
         // Construct the photo URL if a photo exists
-        $photoUrl = $this->photo ? Storage::url($this->photo) : null;
+        $photoUrl = $this->photo ? url(Storage::url($this->photo)) : null;
         // Ensure Storage::url() points to your linked public storage path correctly
 
         return [

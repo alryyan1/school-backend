@@ -6,6 +6,7 @@ use App\Models\Student;
 use Illuminate\Http\Request;
 use App\Http\Resources\StudentResource; // Import the API Resource class (if you create one)
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator; // Import the Validator class
 
 class StudentController extends Controller
@@ -13,9 +14,59 @@ class StudentController extends Controller
     public function index()
     {
         $students = Student::all();
-        return $students;
+        return  StudentResource::collection($students);
     }
+    public function updatePhoto(Request $request, Student $student)
+    {
+        // --- Authorization (Example using Policy) ---
+        // Make sure you have a StudentPolicy with an 'update' or 'updatePhoto' method
+        // $this->authorize('update', $student); // Or specific 'updatePhoto' ability
+        // --- End Authorization ---
 
+        // --- Validation ---
+        $validator = Validator::make($request->all(), [
+            // Validate the 'photo' field from the FormData
+            'image' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048', // Max 2MB example
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => 'خطأ في التحقق من الصورة', 'errors' => $validator->errors()], 422);
+        }
+        // --- End Validation ---
+
+        try {
+            // --- Delete Old Photo ---
+            if ($student->image && Storage::disk('public')->exists($student->image)) {
+                 Storage::disk('public')->delete($student->image);
+            }
+            // --- End Delete Old Photo ---
+
+            // --- Store New Photo ---
+            // Store in 'storage/app/public/students_photos'
+            // The 'store' method generates a unique filename
+            $path = $request->file('image')->store('students_photos', 'public');
+            // --- End Store New Photo ---
+
+
+            // --- Update Database ---
+            // Save the relative path to the database
+            $student->image = $path;
+            $student->save();
+            // --- End Update Database ---
+
+
+            // --- Return Response ---
+            // Return the updated student resource (which should generate the full URL)
+            // Use fresh() to ensure you get the updated model attributes.
+            return new StudentResource($student->fresh());
+            // --- End Return Response ---
+
+        } catch (\Exception $e) {
+             // Handle potential storage errors or other exceptions
+             report($e); // Log the error
+             return response()->json(['message' => 'حدث خطأ أثناء رفع الصورة. '. $e->getMessage()], 500);
+        }
+    }
 
     public function store(Request $request)
     {
@@ -58,7 +109,7 @@ class StudentController extends Controller
         if (!$student) {
             return response()->json(['message' => 'Student not found'], 404); // Not Found
         }
-        return $student;
+        return new StudentResource($student);
     }
 
     public function update(Request $request, Student $student)
