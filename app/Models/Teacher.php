@@ -5,6 +5,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Teacher extends Model
@@ -24,7 +25,10 @@ class Teacher extends Model
         'photo', // Path to photo
         'is_active',
     ];
-
+    public function subjects(): BelongsToMany
+    {
+        return $this->belongsToMany(Subject::class, 'subject_teacher'); // Assumes pivot table name
+    }
     protected $casts = [
         'birth_date' => 'date:Y-m-d', // Cast to date, format on serialization
         'hire_date' => 'date:Y-m-d',  // Cast to date, format on serialization
@@ -35,4 +39,5 @@ class Teacher extends Model
     {
         return $this->hasMany(AcademicYearSubject::class);
     }
+    
 }

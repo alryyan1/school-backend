@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\SubjectResource;
 use App\Models\Teacher;
 use Illuminate\Http\Request;
 use App\Http\Resources\TeacherResource; // Import the resource
@@ -23,7 +24,49 @@ class TeacherController extends Controller
         $teachers = Teacher::latest()->paginate(15); // Example: 15 per page
         return TeacherResource::collection($teachers);
     }
+ /**
+     * Get the subjects assigned to a specific teacher.
+     * GET /api/teachers/{teacher}/subjects
+     */
+    public function getSubjects(Teacher $teacher)
+    {
+        // $this->authorize('view', $teacher); // Optional: Check if user can view teacher details
 
+        // Eager load the subjects relationship
+        $teacher->load('subjects');
+
+        // Return the collection of subjects using SubjectResource
+        return SubjectResource::collection($teacher->subjects);
+    }
+
+    /**
+     * Update/Sync the subjects assigned to a specific teacher.
+     * PUT /api/teachers/{teacher}/subjects
+     */
+    public function updateSubjects(Request $request, Teacher $teacher)
+    {
+        // $this->authorize('update', $teacher); // Optional: Check if user can update teacher details
+
+        $validator = Validator::make($request->all(), [
+            // Expect an array of subject IDs. Allow empty array to remove all subjects.
+            'subject_ids' => 'present|array', // 'present' ensures the key exists, even if empty array
+            'subject_ids.*' => 'integer|exists:subjects,id' // Validate each item in the array
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => 'خطأ في التحقق من المواد', 'errors' => $validator->errors()], 422);
+        }
+
+        // Use sync to update the pivot table.
+        // This adds missing IDs, removes IDs not present in the array.
+        $teacher->subjects()->sync($validator->validated()['subject_ids']);
+
+        // Return success response, maybe with the updated list
+         $teacher->load('subjects'); // Reload the relationship
+         return SubjectResource::collection($teacher->subjects);
+        // Or just a success message:
+        // return response()->json(['message' => 'تم تحديث مواد المدرس بنجاح']);
+    }
     /**
      * Store a newly created resource in storage.
      */

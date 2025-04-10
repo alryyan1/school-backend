@@ -32,12 +32,13 @@ class Subject extends Model
     public function teachers(): BelongsToMany
     {
         // Make sure 'teacher_subjects' table and relationship exist
-        return $this->belongsToMany(Teacher::class, 'teacher_subjects');
+        return $this->belongsToMany(Teacher::class, 'subject_teacher');
     }
     // In app/Models/Subject.php
     public function academicYearSubjects(): HasMany
     {
         return $this->hasMany(AcademicYearSubject::class);
     }
+ 
     // Add other relationships (GradeLevel, etc.) if implemented
 }

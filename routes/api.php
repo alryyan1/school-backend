@@ -8,8 +8,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\VerificationController;
 use App\Http\Controllers\ClassroomController;
+use App\Http\Controllers\ExamController;
 use App\Http\Controllers\GradeLevelController;
 use App\Http\Controllers\SchoolController;
+use App\Http\Controllers\StudentAcademicYearController;
+use App\Http\Controllers\StudentFeePaymentController;
 use App\Http\Controllers\SubjectController;
 use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\UserController;
@@ -68,16 +71,24 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('/schools', SchoolController::class);
     // --- ACADEMIC YEAR ROUTES ---
     Route::apiResource('/academic-years', AcademicYearController::class); // <-- Add this
-     // --- GRADE LEVEL ROUTES ---
-     Route::apiResource('/grade-levels', GradeLevelController::class); // <-- Add this
-       // --- SUBJECT ROUTES ---
+    // --- GRADE LEVEL ROUTES ---
+    Route::apiResource('/grade-levels', GradeLevelController::class); // <-- Add this
+    // --- SUBJECT ROUTES ---
     Route::apiResource('/subjects', SubjectController::class); // <-- Add this
-      // --- ACADEMIC YEAR SUBJECT ROUTES ---
+    // --- ACADEMIC YEAR SUBJECT ROUTES ---
     // Usually accessed via index with filters, but include all methods for flexibility
     Route::apiResource('/academic-year-subjects', AcademicYearSubjectController::class);
-
+    Route::get('/teachers/{teacher}/subjects', [TeacherController::class, 'getSubjects']); // Get assigned subjects
     Route::post('/students/{student}/photo', [StudentController::class, 'updatePhoto'])
-    ->name('students.updatePhoto'); // Optional: Give it 
-       // --- CLASSROOM ROUTES ---
-       Route::apiResource('/classrooms', ClassroomController::class); // <-- Add this
+        ->name('students.updatePhoto'); // Optional: Give it 
+    Route::put('/teachers/{teacher}/subjects', [TeacherController::class, 'updateSubjects']); // Update assigned subjects
+    // --- CLASSROOM ROUTES ---
+    Route::apiResource('/classrooms', ClassroomController::class); // <-- Add this
+    Route::apiResource('/student-enrollments', StudentAcademicYearController::class);
+    // --- STUDENT ENROLLMENT ROUTES ---
+    Route::get('/enrollable-students', [StudentAcademicYearController::class, 'getEnrollableStudents']);
+     // --- STUDENT FEE PAYMENT ROUTES ---
+     Route::apiResource('/student-fee-payments', StudentFeePaymentController::class);
+        // --- EXAM ROUTES ---
+    Route::apiResource('/exams', ExamController::class); 
 });
