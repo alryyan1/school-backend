@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class StudentAcademicYear extends Model
 {
@@ -17,6 +18,7 @@ class StudentAcademicYear extends Model
         'grade_level_id',
         'classroom_id', // Nullable
         'status',
+        'school_id', // <-- Add school_id
     ];
 
     // Optional: Cast status if you create a PHP Enum later
@@ -41,5 +43,14 @@ class StudentAcademicYear extends Model
     {
         // Handles nullable classroom_id
         return $this->belongsTo(Classroom::class);
+    }
+    // --- NEW RELATIONSHIP ---
+    public function school(): BelongsTo
+    {
+        return $this->belongsTo(School::class);
+    }
+    public function transportAssignment(): HasOne // A student has one assignment per year
+    {
+        return $this->hasOne(StudentTransportAssignment::class);
     }
 }

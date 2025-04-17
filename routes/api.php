@@ -9,12 +9,15 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\VerificationController;
 use App\Http\Controllers\ClassroomController;
 use App\Http\Controllers\ExamController;
+use App\Http\Controllers\ExamScheduleController;
 use App\Http\Controllers\GradeLevelController;
 use App\Http\Controllers\SchoolController;
 use App\Http\Controllers\StudentAcademicYearController;
 use App\Http\Controllers\StudentFeePaymentController;
+use App\Http\Controllers\StudentTransportAssignmentController;
 use App\Http\Controllers\SubjectController;
 use App\Http\Controllers\TeacherController;
+use App\Http\Controllers\TransportRouteController;
 use App\Http\Controllers\UserController;
 
 /*
@@ -39,7 +42,7 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 Route::post('/login', [AuthController::class, 'login']);
-Route::post('/register', [UserController::class, 'register']);
+Route::post('/register', [UserController::class, 'store']);
 
 
 Route::middleware('auth:sanctum')->post('/logout', function (Request $request) {
@@ -87,8 +90,21 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('/student-enrollments', StudentAcademicYearController::class);
     // --- STUDENT ENROLLMENT ROUTES ---
     Route::get('/enrollable-students', [StudentAcademicYearController::class, 'getEnrollableStudents']);
-     // --- STUDENT FEE PAYMENT ROUTES ---
-     Route::apiResource('/student-fee-payments', StudentFeePaymentController::class);
-        // --- EXAM ROUTES ---
-    Route::apiResource('/exams', ExamController::class); 
+    // --- STUDENT FEE PAYMENT ROUTES ---
+    Route::apiResource('/student-fee-payments', StudentFeePaymentController::class);
+    // --- EXAM ROUTES ---
+    Route::apiResource('/exams', ExamController::class);
+    // --- School Grade Level Assignment Routes ---
+    Route::get('/schools/{school}/grade-levels', [SchoolController::class, 'getAssignedGradeLevels']);
+    Route::put('/schools/{school}/grade-levels', [SchoolController::class, 'updateAssignedGradeLevels']);
+
+    // --- USER MANAGEMENT ROUTES ---
+    Route::put('/users/{user}/password', [UserController::class, 'updatePassword'])->name('users.updatePassword'); // Change password
+    Route::apiResource('users', UserController::class); // Standard CRUD (index requires policy)
+    // --- EXAM SCHEDULE ROUTES ---
+    Route::apiResource('/exam-schedules', ExamScheduleController::class); // <-- Add this
+
+    // --- TRANSPORTATION ROUTES ---
+    Route::apiResource('/transport-routes', TransportRouteController::class);
+    Route::apiResource('/student-transport-assignments', StudentTransportAssignmentController::class)->except(['show']); // show 
 });

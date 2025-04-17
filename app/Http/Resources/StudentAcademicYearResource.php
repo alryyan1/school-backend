@@ -20,6 +20,8 @@ class StudentAcademicYearResource extends JsonResource
             'academic_year_id' => $this->academic_year_id,
             'grade_level_id' => $this->grade_level_id,
             'classroom_id' => $this->classroom_id,
+            'school_id' => $this->school_id, // <-- Add school_id
+            'school'=> new SchoolResource($this->whenLoaded('school')),
             'status' => $this->status,
             // Load relationships in controller
             'student' => new StudentResource($this->whenLoaded('student')),

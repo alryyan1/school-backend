@@ -8,6 +8,8 @@ use App\Http\Resources\SchoolResource; // Import resource
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage; // Import Storage
 use Illuminate\Validation\Rule; // For unique validation on update
+use App\Http\Resources\GradeLevelResource;
+use App\Models\GradeLevel;
 
 class SchoolController extends Controller
 {
@@ -19,11 +21,11 @@ class SchoolController extends Controller
         // Optional: Authorization check
         // $this->authorize('viewAny', School::class);
 
-         // Get all schools, ordered if desired
-         $schools = School::latest()->get(); // Use get() instead of paginate()
+        // Get all schools, ordered if desired
+        $schools = School::latest()->get(); // Use get() instead of paginate()
 
-         // Return a resource collection (still good practice for consistent format)
-         return SchoolResource::collection($schools);
+        // Return a resource collection (still good practice for consistent format)
+        return SchoolResource::collection($schools);
     }
 
     /**
@@ -143,5 +145,49 @@ class SchoolController extends Controller
 
         return response()->json(['message' => 'تم حذف المدرسة بنجاح'], 200);
         // return response()->noContent(); // Alternative 204 response
+    }
+    /**
+     * Get the Grade Levels assigned to a specific School.
+     * GET /api/schools/{school}/grade-levels
+     */
+    public function getAssignedGradeLevels(School $school)
+    {
+        // Optional: Authorization check if user can view school details
+        // $this->authorize('view', $school);
+
+        // Return only the IDs for simplicity, or full resources
+        // return response()->json(['data' => $school->gradeLevels()->pluck('grade_levels.id')]);
+
+        // Or return full resources
+        return GradeLevelResource::collection($school->gradeLevels()->orderBy('id')->get());
+    }
+    /**
+     * Update/Sync the Grade Levels assigned to a specific School.
+     * PUT /api/schools/{school}/grade-levels
+     */
+    public function updateAssignedGradeLevels(Request $request, School $school)
+    {
+        // Optional: Authorization check if user can update school details
+        // $this->authorize('update', $school);
+
+        $validator = Validator::make($request->all(), [
+            // Expect an array of grade level IDs. Allow empty array.
+            'grade_level_ids' => 'present|array',
+            'grade_level_ids.*' => 'integer|exists:grade_levels,id' // Validate each ID
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => 'خطأ في التحقق من المراحل الدراسية', 'errors' => $validator->errors()], 422);
+        }
+
+        // Use sync() to update the pivot table.
+        // It automatically adds/removes associations based on the provided array.
+        $school->gradeLevels()->sync($validator->validated()['grade_level_ids']);
+
+        // Return success response
+        return response()->json(['message' => 'تم تحديث المراحل الدراسية للمدرسة بنجاح.']);
+
+        // Or return the updated list:
+        // return GradeLevelResource::collection($school->gradeLevels()->orderBy('id')->get());
     }
 }

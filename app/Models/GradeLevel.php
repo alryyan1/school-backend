@@ -5,6 +5,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 // use Illuminate\Database\Eloquent\Relations\BelongsToMany; // If linking to Subjects via pivot
 
@@ -41,6 +42,13 @@ class GradeLevel extends Model
     public function academicYearSubjects(): HasMany
     {
         return $this->hasMany(AcademicYearSubject::class);
+    }
+     /**
+     * The schools that have this grade level.
+     */
+    public function schools(): BelongsToMany // <-- Define Relationship
+    {
+        return $this->belongsToMany(School::class, 'school_grade_levels');
     }
     // Example: Relationship to Subjects (Requires Pivot Table 'grade_level_subject')
     // public function subjects(): BelongsToMany

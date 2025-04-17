@@ -5,6 +5,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+
 // use Illuminate\Database\Eloquent\SoftDeletes; // Uncomment if you add soft deletes later
 
 class School extends Model
@@ -23,7 +25,13 @@ class School extends Model
         'logo', // Path to logo file
         // 'is_active', // Uncomment if added later
     ];
-
+ /**
+     * The grade levels that belong to the school.
+     */
+    public function gradeLevels(): BelongsToMany // <-- Define Relationship
+    {
+        return $this->belongsToMany(GradeLevel::class, 'school_grade_levels');
+    }
     protected $casts = [
         'establishment_date' => 'date:Y-m-d', // Cast to date, format on serialization
         // 'is_active' => 'boolean', // Uncomment if added later
