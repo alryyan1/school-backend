@@ -90,6 +90,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('/student-enrollments', StudentAcademicYearController::class);
     // --- STUDENT ENROLLMENT ROUTES ---
     Route::get('/enrollable-students', [StudentAcademicYearController::class, 'getEnrollableStudents']);
+    Route::get('search', [StudentAcademicYearController::class, 'search']);
+
     // --- STUDENT FEE PAYMENT ROUTES ---
     Route::apiResource('/student-fee-payments', StudentFeePaymentController::class);
     // --- EXAM ROUTES ---

@@ -227,4 +227,61 @@ class StudentAcademicYearController extends Controller
 
         return response()->json(['data' => $assignableStudents]);
     }
+     /**
+     * Search for student enrollments by student ID or name across all years/schools.
+     * GET /api/student-enrollments/search
+     */
+    public function search(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'term' => 'required|string|min:1', // Search term is required
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => 'Search term is required', 'errors' => $validator->errors()], 422);
+        }
+
+        $searchTerm = $request->input('term');
+
+        $query = StudentAcademicYear::with([
+            'student', // Eager load necessary relations
+            'academicYear',
+            'gradeLevel',
+            'classroom',
+            'school' // Include school
+        ])
+        ->join('students', 'student_academic_years.student_id', '=', 'students.id'); // Join to search student fields
+
+        // Check if term is numeric for ID search, otherwise search name
+        if (ctype_digit($searchTerm)) {
+             $query->where('students.id', '=', $searchTerm);
+        } else {
+            $query->where('students.student_name', 'LIKE', "%{$searchTerm}%");
+        }
+
+        // Order results (e.g., by year descending, then student name)
+        $query->join('academic_years', 'student_academic_years.academic_year_id', '=', 'academic_years.id')
+              ->orderBy('academic_years.start_date', 'desc')
+              ->orderBy('students.student_name');
+
+        // Get results (maybe paginate if search can return many results)
+        $enrollments = $query->select('student_academic_years.*')->get();
+        // $enrollments = $query->select('student_academic_years.*')->paginate(25); // Example pagination
+
+
+        return StudentAcademicYearResource::collection($enrollments);
+    }
+      /**
+     * Display the specified resource.
+     */
+    // public function show(StudentAcademicYear $studentAcademicYear) // Uses route model binding
+    // {
+    //     // Optional: Authorization check
+    //     // $this->authorize('view', $studentAcademicYear);
+
+    //     // Load necessary relationships and return the resource
+    //     return new StudentAcademicYearResource(
+    //         $studentAcademicYear->load(['student', 'academicYear', 'gradeLevel', 'classroom', 'school'])
+    //     );
+    // }
 }
