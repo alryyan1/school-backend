@@ -69,6 +69,13 @@ Route::middleware('auth:sanctum')->get('/dashboard-stats', function () {
 Route::middleware('auth:sanctum')->get('/auth/verify', [VerificationController::class, 'verify']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('/students', StudentController::class);
+    // --- School Grade Level Assignment Routes ---
+    Route::put('/schools/{school}/grade-levels', [SchoolController::class, 'updateAssignedGradeLevels']);
+    Route::get('/schools/{school}/grade-levels', [SchoolController::class, 'getAssignedGradeLevels'])->name('schools.grades.index');
+    Route::post('/schools/{school}/grade-levels', [SchoolController::class, 'attachGradeLevels'])->name('schools.grades.attach');
+    Route::put('/schools/{school}/grade-levels/{grade_level}', [SchoolController::class, 'updateGradeLevelFee'])->name('schools.grades.updateFee');
+    Route::delete('/schools/{school}/grade-levels/{grade_level}', [SchoolController::class, 'detachGradeLevel'])->name('schools.grades.detach');
+    // --- End Assignment Routes ---
 
     Route::apiResource('/teachers', TeacherController::class);
     Route::apiResource('/schools', SchoolController::class);
@@ -96,9 +103,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('/student-fee-payments', StudentFeePaymentController::class);
     // --- EXAM ROUTES ---
     Route::apiResource('/exams', ExamController::class);
-    // --- School Grade Level Assignment Routes ---
-    Route::get('/schools/{school}/grade-levels', [SchoolController::class, 'getAssignedGradeLevels']);
-    Route::put('/schools/{school}/grade-levels', [SchoolController::class, 'updateAssignedGradeLevels']);
+
 
     // --- USER MANAGEMENT ROUTES ---
     Route::put('/users/{user}/password', [UserController::class, 'updatePassword'])->name('users.updatePassword'); // Change password

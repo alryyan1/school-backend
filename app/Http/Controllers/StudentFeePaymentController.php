@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\StudentFeePayment;
 use App\Models\StudentAcademicYear; // Import
+use App\Rules\PaymentExceedTotal;
 use Illuminate\Http\Request;
 use App\Http\Resources\StudentFeePaymentResource;
 use Illuminate\Support\Facades\Validator;
@@ -42,9 +43,13 @@ class StudentFeePaymentController extends Controller
 
         $validator = Validator::make($request->all(), [
             'student_academic_year_id' => 'required|integer|exists:student_academic_years,id',
-            'amount' => 'required|numeric|min:0.01', // Ensure positive amount
+            'amount' => [
+                'required',
+                new PaymentExceedTotal($request->input('student_academic_year_id'))
+            ], // Ensure positive amount
             'payment_date' => 'required|date_format:Y-m-d',
             'notes' => 'nullable|string|max:1000',
+
         ]);
 
         if ($validator->fails()) {

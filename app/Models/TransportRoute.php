@@ -5,6 +5,37 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * 
+ *
+ * @property int $id
+ * @property int $school_id
+ * @property string $name
+ * @property string|null $description
+ * @property int|null $driver_id
+ * @property string|null $fee_amount
+ * @property bool $is_active
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \App\Models\User|null $driver
+ * @property-read \App\Models\School $school
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\StudentTransportAssignment> $studentAssignments
+ * @property-read int|null $student_assignments_count
+ * @method static \Database\Factories\TransportRouteFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder|TransportRoute newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|TransportRoute newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|TransportRoute query()
+ * @method static \Illuminate\Database\Eloquent\Builder|TransportRoute whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|TransportRoute whereDescription($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|TransportRoute whereDriverId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|TransportRoute whereFeeAmount($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|TransportRoute whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|TransportRoute whereIsActive($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|TransportRoute whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|TransportRoute whereSchoolId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|TransportRoute whereUpdatedAt($value)
+ * @mixin \Eloquent
+ */
 class TransportRoute extends Model {
     use HasFactory;
     protected $fillable = ['school_id', 'name', 'description', 'driver_id', 'fee_amount', 'is_active'];

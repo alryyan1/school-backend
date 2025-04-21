@@ -190,4 +190,93 @@ class SchoolController extends Controller
         // Or return the updated list:
         // return GradeLevelResource::collection($school->gradeLevels()->orderBy('id')->get());
     }
+    /**
+     * Attach one or more Grade Levels to a School with their basic fees.
+     * POST /api/schools/{school}/grade-levels
+     */
+    public function attachGradeLevels(Request $request, School $school) {
+        // $this->authorize('update', $school); // Or a more specific permission
+
+        $validator = Validator::make($request->all(), [
+            // Expect an array of objects: [{ grade_level_id: 1, basic_fees: 5000 }, ...]
+            'grade_level_id' => [
+                'required', 'integer',
+                Rule::exists('grade_levels','id'),
+                // Ensure this grade level isn't already assigned to this school
+                Rule::unique('school_grade_levels')->where(function ($query) use ($school) {
+                    return $query->where('school_id', $school->id);
+                })
+            ],
+            'assignments.*.basic_fees' => 'required|integer|min:0', // Changed to integer as per migration
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => 'خطأ في التحقق', 'errors' => $validator->errors()], 422);
+        }
+
+        $assignmentsData = [];
+        $grade_level_id = $request->input('grade_level_id');
+        $basic_fees = $request->input('basic_fees');
+
+        $school->gradeLevels()->attach([
+            $grade_level_id => ['basic_fees'=>$basic_fees]
+        ]);
+
+        // Return the newly assigned grades (optional) or just success
+         return GradeLevelResource::collection($school->gradeLevels()->whereIn('grade_levels.id', array_keys($assignmentsData))->get());
+        // return response()->json(['message' => 'تم تعيين المراحل بنجاح']);
+    }
+      /**
+     * Update the basic_fees for a specific School-GradeLevel assignment.
+     * PUT /api/schools/{school}/grade-levels/{grade_level}
+     */
+    public function updateGradeLevelFee(Request $request, School $school, GradeLevel $gradeLevel) {
+        // $this->authorize('update', $school);
+
+        $validator = Validator::make($request->all(), [
+            'basic_fees' => 'required|integer|min:0', // Validate the fee
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => 'خطأ في التحقق', 'errors' => $validator->errors()], 422);
+        }
+
+        // Check if the grade is actually assigned to the school first
+        if (!$school->gradeLevels()->where('grade_levels.id', $gradeLevel->id)->exists()) {
+             return response()->json(['message' => 'المرحلة المحددة غير معينة لهذه المدرسة.'], 404);
+        }
+
+        // Use updateExistingPivot to update the extra pivot field
+        $school->gradeLevels()->updateExistingPivot($gradeLevel->id, [
+            'basic_fees' => $validator->validated()['basic_fees'],
+        ]);
+
+        // Fetch the updated relationship data to return
+        $updatedGrade = $school->gradeLevels()->find($gradeLevel->id);
+        return new GradeLevelResource($updatedGrade);
+        // return response()->json(['message' => 'تم تحديث الرسوم بنجاح']);
+    }
+
+    /**
+     * Detach/Unassign a Grade Level from a School.
+     * DELETE /api/schools/{school}/grade-levels/{grade_level}
+     */
+    public function detachGradeLevel(School $school, GradeLevel $gradeLevel) {
+        // $this->authorize('update', $school); // Use update permission?
+
+        // Add checks here: Prevent detach if classrooms or enrollments exist for this school/grade combo?
+        // Example check (requires relationships defined):
+        // if (Classroom::where('school_id', $school->id)->where('grade_level_id', $gradeLevel->id)->exists()) {
+        //    return response()->json(['message' => 'لا يمكن إلغاء تعيين المرحلة لوجود فصول مرتبطة بها.'], 409);
+        // }
+
+        $detached = $school->gradeLevels()->detach($gradeLevel->id); // Returns number of records detached
+
+        if ($detached) {
+            return response()->json(['message' => 'تم إلغاء تعيين المرحلة بنجاح.']);
+        } else {
+            return response()->json(['message' => 'المرحلة لم تكن معينة لهذه المدرسة.'], 404);
+        }
+    }
+
 }

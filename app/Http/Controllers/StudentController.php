@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator; // Import the Validator class
 use TCPDF;
+use TCPDF_FONTS;
 
 class StudentPdf extends TCPDF // Optional: Extend TCPDF for custom Headers/Footers
 {
@@ -117,7 +118,7 @@ class StudentController extends Controller
             // Concatenate the error messages into a single string
             $errorMessage = '';
             foreach ($errors->all() as $error) {
-                $errorMessage .= $error . ' '; // Add a space between messages
+                $errorMessage .= $error . " \n"; // Add a space between messages
             }
 
             return response()->json(['message' => $errorMessage], 422);
@@ -164,6 +165,7 @@ class StudentController extends Controller
         }
 
         $student->update($request->all());
+        return $student->fresh();
     }
 
     public function destroy(Student $student)
@@ -194,6 +196,7 @@ class StudentController extends Controller
         // Or use the base class
         $pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
 
+
         // --- Document Information ---
         $pdf->SetCreator(PDF_CREATOR);
         $pdf->SetAuthor(config('app.name')); // Use your app name
@@ -218,8 +221,15 @@ class StudentController extends Controller
         $pdf->setImageScale(PDF_IMAGE_SCALE_RATIO);
         // Set language directionality - IMPORTANT FOR ARABIC
         $pdf->setRTL(true);
+        $font_path = public_path('\fonts').'\arial.ttf';
+        TCPDF_FONTS::addTTFfont($font_path);
+        $font = 'arial';
+
+
+        // $pdf->addtt()
+        // echo $font;
         // Set default font that supports Arabic - CRUCIAL
-        $pdf->SetFont('dejavusans', '', 10); // ''=regular, 'B'=bold, 'I'=italic
+        $pdf->SetFont($font, '', 10); // ''=regular, 'B'=bold, 'I'=italic
 
         // --- Add a page ---
         $pdf->AddPage();
@@ -227,7 +237,7 @@ class StudentController extends Controller
         // --- Content Generation using Cell() ---
 
         // --- Title Section ---
-        $pdf->SetFont('dejavusans', 'B', 16);
+        $pdf->SetFont($font, 'B', 16);
         $pdf->Cell(0, 12, 'بيانات الطالب', 0, 1, 'C'); // ln=1 moves to next line, align=C center
         $pdf->Ln(8); // Add vertical space
 
@@ -250,23 +260,23 @@ class StudentController extends Controller
         $lineHeight = 7; // Height of each row cell
 
         // --- Helper function for Key-Value pairs ---
-        $printRow = function (string $label, ?string $value, bool $isBoldValue = false) use ($pdf, $labelWidth, $valueWidth, $lineHeight) {
-            $pdf->SetFont('dejavusans', 'B', 10); // Bold Label
+        $printRow = function (string $label, ?string $value, bool $isBoldValue = false) use ($pdf, $labelWidth, $valueWidth, $lineHeight,$font) {
+            $pdf->SetFont($font, 'B', 14); // Bold Label
             $pdf->Cell($labelWidth, $lineHeight, $label . ':', 0, 0, 'R'); // Right align label
-            $pdf->SetFont('dejavusans', $isBoldValue ? 'B' : '', 10); // Value font
+            $pdf->SetFont($font, $isBoldValue ? 'B' : '', 14); // Value font
             $pdf->Cell($valueWidth, $lineHeight, $value ?? '-', 0, 1, 'R'); // Right align value, ln=1 to move down
         };
 
         // --- Basic Info Section ---
         $pdf->SetFont('dejavusans', 'B', 12);
-        $pdf->Cell(0, 10, 'المعلومات الأساسية', 'B', 1, 'R'); // Border Bottom, Right align
+        $pdf->Cell(0, 10, 'المعلومات الأساسية', '', 1, 'R'); // Border Bottom, Right align
         $pdf->Ln(3);
         $printRow('الاسم الكامل', $student->student_name, true); // Make name bold
         $printRow('تاريخ الميلاد', $student->date_of_birth ? $student->date_of_birth: null); // Format date
         $printRow('الجنس', $student->gender);
         $printRow('المرحلة المرغوبة', $student->wished_level);
         $printRow('الرقم الوطني', $student->goverment_id);
-        $printRow('البريد الإلكتروني', $student->email);
+        // $printRow('البريد الإلكتروني', $student->email);
         $printRow('المدرسة السابقة', $student->referred_school);
         $printRow('نسبة النجاح السابقة', $student->success_percentage ? $student->success_percentage . '%' : null);
         $printRow('الحالة الصحية', $student->medical_condition);
@@ -308,11 +318,11 @@ class StudentController extends Controller
         }
 
         // --- Closest Person Info Section ---
-        $pdf->SetFont('dejavusans', 'B', 12);
-        $pdf->Cell(0, 10, 'أقرب شخص للطالب', 'B', 1, 'R');
-        $pdf->Ln(3);
-        $printRow('الاسم', $student->closest_name);
-        $printRow('الهاتف', $student->closest_phone);
+        // $pdf->SetFont('dejavusans', 'B', 12);
+        // $pdf->Cell(0, 10, 'أقرب شخص للطالب', 'B', 1, 'R');
+        // $pdf->Ln(3);
+        // $printRow('الاسم', $student->closest_name);
+        // $printRow('الهاتف', $student->closest_phone);
         $pdf->Ln(6);
 
         // --- Approval Status Section ---
@@ -322,7 +332,7 @@ class StudentController extends Controller
         $printRow('الحالة', $student->approved ? 'مقبول' : 'قيد المراجعة');
         $printRow('تاريخ القبول', $student->aproove_date ? $student->aproove_date: null); // Check spelling 'aproove_date'
         $printRow('تم القبول بواسطة (ID)', $student->approved_by_user ? (string)$student->approved_by_user : null);
-        $printRow('تم إرسال الرسالة', $student->message_sent ? 'نعم' : 'لا');
+        // $printRow('تم إرسال الرسالة', $student->message_sent ? 'نعم' : 'لا');
         $pdf->Ln(6);
 
 

@@ -8,6 +8,33 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany; // If linking students
 
+/**
+ * 
+ *
+ * @property int $id
+ * @property string $name
+ * @property int $grade_level_id
+ * @property int|null $teacher_id
+ * @property int $capacity
+ * @property int $school_id
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \App\Models\GradeLevel $gradeLevel
+ * @property-read \App\Models\Teacher|null $homeroomTeacher
+ * @property-read \App\Models\School $school
+ * @method static \Illuminate\Database\Eloquent\Builder|Classroom newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|Classroom newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|Classroom query()
+ * @method static \Illuminate\Database\Eloquent\Builder|Classroom whereCapacity($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Classroom whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Classroom whereGradeLevelId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Classroom whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Classroom whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Classroom whereSchoolId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Classroom whereTeacherId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Classroom whereUpdatedAt($value)
+ * @mixin \Eloquent
+ */
 class Classroom extends Model
 {
     use HasFactory;

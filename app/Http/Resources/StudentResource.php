@@ -65,7 +65,7 @@ class StudentResource extends JsonResource
             // Approval Info
             'approved' => $this->approved, // Relies on $casts['boolean'] in Model
             // Correct spelling 'aproove_date' based on your migration
-            'approve_date' => $this->aproove_date, // Relies on $casts['datetime'] in Model
+            'aproove_date' => $this->aproove_date, // Relies on $casts['datetime'] in Model
             'approved_by_user_id' => $this->approved_by_user, // Send the ID
             'message_sent' => $this->message_sent, // Relies on $casts['boolean'] in Model
 

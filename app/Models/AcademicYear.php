@@ -8,6 +8,33 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+/**
+ * 
+ *
+ * @property int $id
+ * @property string $name
+ * @property \Illuminate\Support\Carbon $start_date
+ * @property \Illuminate\Support\Carbon $end_date
+ * @property bool $is_current
+ * @property int $school_id
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \Illuminate\Database\Eloquent\Collection<int, \App\Models\AcademicYearSubject> $academicYearSubjects
+ * @property-read int|null $academic_year_subjects_count
+ * @property-read \App\Models\School $school
+ * @method static \Illuminate\Database\Eloquent\Builder|AcademicYear newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|AcademicYear newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|AcademicYear query()
+ * @method static \Illuminate\Database\Eloquent\Builder|AcademicYear whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|AcademicYear whereEndDate($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|AcademicYear whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|AcademicYear whereIsCurrent($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|AcademicYear whereName($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|AcademicYear whereSchoolId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|AcademicYear whereStartDate($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|AcademicYear whereUpdatedAt($value)
+ * @mixin \Eloquent
+ */
 class AcademicYear extends Model
 {
     use HasFactory;

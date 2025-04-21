@@ -8,8 +8,10 @@ use App\Models\AcademicYear; // Import
 use Illuminate\Http\Request;
 use App\Http\Resources\StudentAcademicYearResource;
 use App\Models\StudentTransportAssignment;
+use App\Rules\MaxAmountBasedOnGrade;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Whoops\Run;
 
 class StudentAcademicYearController extends Controller
 {
@@ -120,6 +122,12 @@ class StudentAcademicYearController extends Controller
                 })
             ],
             'grade_level_id' => 'required|integer|exists:grade_levels,id',
+            'fees'=>[
+                'required',
+                'integer',
+                new MaxAmountBasedOnGrade($request->input('school_id'),$request->input('grade_level_id')),
+            ],
+            'discount'=>'required|integer|in:0,10,20,30,40',
             'classroom_id' => [
                 'nullable',
                 'integer',

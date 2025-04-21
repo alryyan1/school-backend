@@ -7,6 +7,46 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
+/**
+ * 
+ *
+ * @property int $id
+ * @property int $exam_id
+ * @property int $subject_id
+ * @property int $grade_level_id
+ * @property int|null $classroom_id
+ * @property int|null $teacher_id
+ * @property \Illuminate\Support\Carbon $exam_date
+ * @property string $start_time
+ * @property string $end_time
+ * @property string $max_marks
+ * @property string|null $pass_marks
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \App\Models\Classroom|null $classroom
+ * @property-read \App\Models\Exam $exam
+ * @property-read \App\Models\GradeLevel $gradeLevel
+ * @property-read \App\Models\Subject $subject
+ * @property-read \App\Models\Teacher|null $teacher
+ * @method static \Database\Factories\ExamScheduleFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder|ExamSchedule newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|ExamSchedule newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|ExamSchedule query()
+ * @method static \Illuminate\Database\Eloquent\Builder|ExamSchedule whereClassroomId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|ExamSchedule whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|ExamSchedule whereEndTime($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|ExamSchedule whereExamDate($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|ExamSchedule whereExamId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|ExamSchedule whereGradeLevelId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|ExamSchedule whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|ExamSchedule whereMaxMarks($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|ExamSchedule wherePassMarks($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|ExamSchedule whereStartTime($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|ExamSchedule whereSubjectId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|ExamSchedule whereTeacherId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|ExamSchedule whereUpdatedAt($value)
+ * @mixin \Eloquent
+ */
 class ExamSchedule extends Model
 {
     use HasFactory;

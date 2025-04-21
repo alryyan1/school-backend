@@ -14,15 +14,27 @@ class GradeLevelResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        return [
+        $data = [
             'id' => $this->id,
             'name' => $this->name,
             'code' => $this->code,
             'description' => $this->description,
-            // Optional: Include counts if needed for display
-            // 'classrooms_count' => $this->whenCounted('classrooms'),
-            'created_at' => $this->created_at->toIso8601String(),
-            'updated_at' => $this->updated_at->toIso8601String(),
+            'created_at' => $this->created_at?->toIso8601String(), // Add null safe operator
+            'updated_at' => $this->updated_at?->toIso8601String(), // Add null safe operator
         ];
+
+        // Conditionally add pivot data if loaded via relationship
+        // Note: $this->whenPivotLoaded is safer than checking isset($this->pivot)
+        $data['assignment_details'] = $this->whenPivotLoaded('school_grade_levels', function () {
+            return [
+                'basic_fees' => $this->pivot->basic_fees,
+                // Include other pivot fields like created_at/updated_at if needed
+                 'assigned_at' => $this->pivot->created_at?->toIso8601String(),
+                 'fee_last_updated_at' => $this->pivot->updated_at?->toIso8601String(),
+            ];
+        });
+     
+
+        return $data;
     }
 }

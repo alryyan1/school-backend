@@ -143,7 +143,7 @@ class TeacherController extends Controller
              'hire_date' => 'sometimes|required|date_format:Y-m-d',
              'address' => 'nullable|string',
              'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // Validate new photo if uploaded
-             'is_active' => 'sometimes|boolean',
+            
         ]);
 
         if ($validator->fails()) {

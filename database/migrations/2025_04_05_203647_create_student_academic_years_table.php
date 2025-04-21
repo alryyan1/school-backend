@@ -26,6 +26,8 @@ return new class extends Migration
             $table->foreignIdFor(GradeLevel::class)->constrained(); // الصف الدراسي (مثال: الصف الأول الثانوي)
             $table->foreignIdFor(Classroom::class)->nullable()->constrained(); // الفصل (مثال: "أولى ثانوي أ")
             $table->enum('status', ['active', 'transferred', 'graduated', 'withdrawn'])->default('active');
+            $table->integer('fees');
+            $table->integer('discount');
             $table->timestamps();
             $table->unique(['student_id', 'academic_year_id']); // منع تكرار تسجيل الطالب في نفس السنة
         });

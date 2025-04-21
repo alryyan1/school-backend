@@ -17,6 +17,7 @@ return new class extends Migration
             $table->id();
             $table->foreignIdFor(School::class)->constrained();
             $table->foreignIdFor(GradeLevel::class)->constrained();
+            $table->integer('basic_fees');
             $table->timestamps();
         });
     }
