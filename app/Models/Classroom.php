@@ -75,7 +75,15 @@ class Classroom extends Model
     {
         return $this->belongsTo(School::class);
     }
-
+ // --- ADD THIS RELATIONSHIP ---
+    /**
+     * Get the student enrollment records associated with this classroom.
+     */
+    public function enrollments(): HasMany
+    {
+        // A classroom can have many student enrollment records assigned to it via 'classroom_id'
+        return $this->hasMany(StudentAcademicYear::class);
+    }
     /**
      * Get the students assigned to this classroom (requires student model update).
      * Example: Assuming students table has a nullable classroom_id

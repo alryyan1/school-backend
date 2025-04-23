@@ -30,5 +30,10 @@ return [
         'secret' => env('AWS_SECRET_ACCESS_KEY'),
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
-
+    'waapi' => [
+        'url' => env('WAAPI_URL'),
+        'instance_id' => env('WAAPI_INSTANCE_ID'), // <-- Add Instance ID
+        'token' => env('WAAPI_TOKEN'),
+        'default_country_code' => env('WAAPI_DEFAULT_COUNTRY_CODE', '249'),
+    ],
 ];

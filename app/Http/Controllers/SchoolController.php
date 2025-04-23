@@ -22,7 +22,7 @@ class SchoolController extends Controller
         // $this->authorize('viewAny', School::class);
 
         // Get all schools, ordered if desired
-        $schools = School::latest()->get(); // Use get() instead of paginate()
+        $schools = School::withCount('classrooms')->orderBy('name')->get(); // Use get() instead of paginate()
 
         // Return a resource collection (still good practice for consistent format)
         return SchoolResource::collection($schools);

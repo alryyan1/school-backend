@@ -64,6 +64,9 @@ class StudentAcademicYearController extends Controller
         }
 
     }
+    public function getAllStudentAcademicYear(){
+        return StudentAcademicYear::all();
+    }
 
 
     /**

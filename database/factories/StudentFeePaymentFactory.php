@@ -1,25 +1,25 @@
-<?php
-
+<?php // database/factories/StudentFeePaymentFactory.php
 namespace Database\Factories;
 
 use App\Models\StudentFeePayment;
-use App\Models\StudentAcademicYear; // Import
+use App\Models\FeeInstallment; // Use FeeInstallment
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 class StudentFeePaymentFactory extends Factory
 {
     protected $model = StudentFeePayment::class;
-
     public function definition(): array
     {
-        // Assumes StudentAcademicYear records exist
-        $enrollment = StudentAcademicYear::inRandomOrder()->first() ?? StudentAcademicYear::factory()->create();
-
+        // Get an installment that is not fully paid
+        $installment = FeeInstallment::where('status', '!=', 'paid')->inRandomOrder()->first() ?? FeeInstallment::factory()->create();
+        // Pay a portion or the remaining amount
+        $remaining = $installment->amount_due - $installment->amount_paid;
+        $paymentAmount = $this->faker->randomFloat(2, 10, $remaining);
         return [
-            'student_academic_year_id' => $enrollment->id,
-            'amount' => $this->faker->randomFloat(2, 50, 500), // Amount between 50.00 and 500.00
-            'payment_date' => $this->faker->dateTimeBetween('-1 year', 'now')->format('Y-m-d'),
-            'notes' => $this->faker->optional(0.3)->sentence(), // 30% chance of having notes
+            'fee_installment_id' => $installment->id, // <-- Link to installment
+            'amount' => $paymentAmount,
+            'payment_date' => $this->faker->dateTimeBetween($installment->due_date, '+1 month')->format('Y-m-d'),
+            'notes' => $this->faker->optional(0.3)->sentence(),
         ];
     }
 }

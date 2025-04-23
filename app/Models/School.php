@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 // use Illuminate\Database\Eloquent\SoftDeletes; // Uncomment if you add soft deletes later
 
@@ -69,6 +70,18 @@ class School extends Model
         'establishment_date' => 'date:Y-m-d', // Cast to date, format on serialization
         // 'is_active' => 'boolean', // Uncomment if added later
     ];
+    
+    // --- ADD THIS RELATIONSHIP ---
+    public function classrooms(): HasMany {
+        // A school has many classrooms (relationship defined by 'school_id' on classrooms table)
+        return $this->hasMany(Classroom::class);
+    }
+    // --------------------------
+
+    // Add other relationships like academicYears if needed
+    public function academicYears(): HasMany {
+         return $this->hasMany(AcademicYear::class);
+     }
 
     // Define relationships here if needed in the future
     // e.g., public function students() { return $this->hasMany(Student::class); }

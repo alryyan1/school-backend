@@ -17,23 +17,54 @@ class ClassroomController extends Controller
      * Display a listing of the resource.
      * Allow filtering by school_id and grade_level_id
      */
+    // public function index(Request $request)
+    // {
+    //     // $this->authorize('viewAny', Classroom::class);
+
+    //     $query = Classroom::with(['school', 'gradeLevel', 'homeroomTeacher'])->latest();
+
+    //     // Filter by School
+    //     if ($request->filled('school_id')) {
+    //         $query->where('school_id', $request->input('school_id'));
+    //     }
+
+    //      // Filter by Grade Level
+    //      if ($request->filled('grade_level_id')) {
+    //         $query->where('grade_level_id', $request->input('grade_level_id'));
+    //     }
+
+    //     $classrooms = $query->get(); // Get all filtered results (no pagination)
+
+    //     return ClassroomResource::collection($classrooms);
+    // }
     public function index(Request $request)
     {
         // $this->authorize('viewAny', Classroom::class);
+        $validator = Validator::make($request->all(), [
+            'school_id' => 'required|integer|exists:schools,id',
+            // Expect active_year_id from frontend (using settings store)
+            'active_academic_year_id' => 'required|integer|exists:academic_years,id'
+        ]);
+        if ($validator->fails()) return response()->json(['message' => 'School and Active Year required', 'errors' => $validator->errors()], 422);
 
-        $query = Classroom::with(['school', 'gradeLevel', 'homeroomTeacher'])->latest();
+        $schoolId = $request->input('school_id');
+        $activeYearId = $request->input('active_academic_year_id');
 
-        // Filter by School
-        if ($request->filled('school_id')) {
-            $query->where('school_id', $request->input('school_id'));
-        }
+        $query = Classroom::with(['gradeLevel:id,name']) // Load necessary minimal relations
+            // Count student enrollments for the ACTIVE year and ACTIVE status
+            ->withCount(['enrollments as students_count' => function ($query) use ($activeYearId) {
+                // $query->whereHas('studentAcademicYear', function ($q) use ($activeYearId) {
+                    // $q->where('academic_year_id', $activeYearId);
+                        // ->where('status', 'active'); // Only count active students
+                // });
+            }])
+            ->where('school_id', $schoolId);
 
-         // Filter by Grade Level
-         if ($request->filled('grade_level_id')) {
+        if ($request->filled('grade_level_id')) {
             $query->where('grade_level_id', $request->input('grade_level_id'));
         }
 
-        $classrooms = $query->get(); // Get all filtered results (no pagination)
+        $classrooms = $query->get();
 
         return ClassroomResource::collection($classrooms);
     }
@@ -83,7 +114,7 @@ class ClassroomController extends Controller
             'grade_level_id' => ['sometimes', 'required', 'integer', Rule::exists('grade_levels', 'id')],
             'teacher_id' => ['nullable', 'integer', Rule::exists('teachers', 'id')], // Allow setting to null
             'capacity' => 'sometimes|required|integer|min:1',
-             // Usually school_id is not updated, but allow if needed
+            // Usually school_id is not updated, but allow if needed
             // 'school_id' => ['sometimes', 'required', 'integer', Rule::exists('schools', 'id')],
         ]);
 

@@ -96,4 +96,8 @@ class StudentAcademicYear extends Model
     public function payments():HasMany {
         return $this->hasMany(StudentFeePayment::class);
     }
+    // --- Add this relationship ---
+    public function feeInstallments(): HasMany {
+        return $this->hasMany(FeeInstallment::class)->orderBy('due_date'); // Order by due date
+    }
 }

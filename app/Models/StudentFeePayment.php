@@ -34,26 +34,24 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class StudentFeePayment extends Model
 {
     use HasFactory;
+   // Fillable needs fee_installment_id now
+   protected $fillable = [ 'fee_installment_id', 'amount', 'payment_date', 'notes' ]; // <-- Updated
+   protected $casts = [ 'amount' => 'decimal:2', 'payment_date' => 'date:Y-m-d' ];
 
-    protected $fillable = [
-        'student_academic_year_id',
-        'amount',
-        'payment_date',
-        'notes',
-    ];
+   // --- Updated Relationship ---
+   public function feeInstallment(): BelongsTo {
+       return $this->belongsTo(FeeInstallment::class);
+   }
+   // -------------------------
 
-    protected $casts = [
-        // Cast amount to a specific decimal format (e.g., 2 decimal places)
-        // Adjust '2' if you need different precision
-        'amount' => 'decimal:2',
-        'payment_date' => 'date:Y-m-d',
-    ];
+   // Remove or comment out the old relationship
+   // public function studentAcademicYear(): BelongsTo { /* ... old ... */ }
 
     /**
      * Get the enrollment record this payment belongs to.
      */
-    public function studentAcademicYear(): BelongsTo
-    {
-        return $this->belongsTo(StudentAcademicYear::class);
-    }
+    // public function studentAcademicYear(): BelongsTo
+    // {
+    //     return $this->belongsTo(StudentAcademicYear::class);
+    // }
 }

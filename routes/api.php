@@ -10,7 +10,9 @@ use App\Http\Controllers\Auth\VerificationController;
 use App\Http\Controllers\ClassroomController;
 use App\Http\Controllers\ExamController;
 use App\Http\Controllers\ExamScheduleController;
+use App\Http\Controllers\FeeInstallmentController;
 use App\Http\Controllers\GradeLevelController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\SchoolController;
 use App\Http\Controllers\StudentAcademicYearController;
 use App\Http\Controllers\StudentFeePaymentController;
@@ -97,10 +99,19 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('/student-enrollments', StudentAcademicYearController::class);
     // --- STUDENT ENROLLMENT ROUTES ---
     Route::get('/enrollable-students', [StudentAcademicYearController::class, 'getEnrollableStudents']);
+    Route::get('/getAllStudentAcademicYear', [StudentAcademicYearController::class, 'getAllStudentAcademicYear']);
     Route::get('search', [StudentAcademicYearController::class, 'search']);
 
     // --- STUDENT FEE PAYMENT ROUTES ---
     Route::apiResource('/student-fee-payments', StudentFeePaymentController::class);
+    // --- FEE INSTALLMENT ROUTES ---
+    Route::apiResource('/fee-installments', FeeInstallmentController::class); // <-- Add this
+    // --- Route to get installments due soon ---
+    Route::get('/fee-installment/due-soon', [FeeInstallmentController::class, 'getDueSoon'])
+         ->name('installments.dueSoon');
+    // --- Add route for generating installments ---
+    Route::post('/student-enrollments/{studentAcademicYear}/generate-installments', [FeeInstallmentController::class, 'generateInstallments'])
+        ->name('enrollments.installments.generate');
     // --- EXAM ROUTES ---
     Route::apiResource('/exams', ExamController::class);
 
@@ -114,4 +125,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // --- TRANSPORTATION ROUTES ---
     Route::apiResource('/transport-routes', TransportRouteController::class);
     Route::apiResource('/student-transport-assignments', StudentTransportAssignmentController::class)->except(['show']); // show 
+     // --- Route for sending installment reminder ---
+     Route::post('/notify/whatsapp/installment/{feeInstallment}', [NotificationController::class, 'sendInstallmentReminder'])
+     ->name('notify.installment.whatsapp');
 });

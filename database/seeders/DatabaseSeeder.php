@@ -4,8 +4,10 @@ namespace Database\Seeders;
 
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 
+use App\Models\AcademicYear;
 use App\Models\Teacher;
 use App\Models\User;
+use Carbon\Carbon;
 use Database\Factories\TeacherFactory;
 use Illuminate\Database\Seeder;
 
@@ -34,7 +36,13 @@ class DatabaseSeeder extends Seeder
 
         ]);
 
-
+        AcademicYear::create([
+            'name'=>'2025',
+            'school_id'=>1,
+            'start_date'=>Carbon::now(),
+            'end_date'=>Carbon::now()->addMonths(12),
+            
+        ]);
         // \App\Models\User::factory(10)->create();
 
         // \App\Models\User::factory()->create([
