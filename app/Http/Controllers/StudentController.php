@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\StudentListPdf;
 use App\Models\Student;
 use Illuminate\Http\Request;
 use App\Http\Resources\StudentResource; // Import the API Resource class (if you create one)
@@ -344,5 +345,135 @@ class StudentController extends Controller
         $pdf->Output('student_report_' . $student->id . '.pdf', 'I');
         exit; // Stop script execution after PDF output
 
+    }
+    /**
+     * Generate a PDF list of students.
+     * GET /reports/students/list-pdf
+     * Allows filtering via query params (e.g., ?status=active&grade_id=5)
+     */
+    public function generateListPdf(Request $request) // Inject Request
+    {
+        // Authorization check (e.g., only admins/teachers)
+        // $this->authorize('viewAny', Student::class);
+
+        // --- Fetch Students with Filters (Example) ---
+        $query = Student::query(); // Start query builder
+
+        // Example Filters (Adapt based on your needs and how students relate to grades/status)
+        // If status is directly on students table (it's not in your migration)
+        // if ($request->filled('status')) {
+        //     $query->where('status', $request->input('status'));
+        // }
+
+        // If filtering by GradeLevel (requires relationship via StudentAcademicYear)
+        // This assumes you want students currently enrolled in a grade for the active year
+        if ($request->filled('grade_level_id') && $request->filled('academic_year_id')) {
+             $query->whereHas('enrollments', function ($q) use ($request) {
+                 $q->where('academic_year_id', $request->input('academic_year_id'))
+                   ->where('grade_level_id', $request->input('grade_level_id'))
+                   ->where('status', 'active'); // Only active enrollments
+             });
+        }
+        // Add other filters as needed (e.g., school_id via enrollment)
+
+        $students = $query->orderBy('id')->get();
+        // --- End Fetch Students ---
+
+
+        // --- PDF Creation ---
+        $pdf = new StudentListPdf('P', PDF_UNIT, 'A4', true, 'UTF-8', false); // Portrait A4
+
+        // --- Optional: Set Filter Info for Header ---
+        $filterText = "جميع الطلاب"; // Default
+        // Build filter text based on request parameters (example)
+        // if ($request->filled('grade_level_id')) {
+        //     $grade = \App\Models\GradeLevel::find($request->input('grade_level_id'));
+        //     $filterText = "طلاب " . ($grade->name ?? 'مرحلة محددة');
+        // }
+        // $pdf->filterInfo = $filterText;
+        // --- End Filter Info ---
+
+
+        // --- Metadata & Setup ---
+        $pdf->SetCreator(PDF_CREATOR);
+        $pdf->SetAuthor(config('app.name'));
+        $pdf->SetTitle('قائمة الطلاب');
+        $pdf->SetSubject('قائمة ببيانات الطلاب المسجلين');
+        $pdf->SetMargins(10, 30, 10); // L, T, R (adjust top margin for header)
+        $pdf->SetHeaderMargin(5);
+        $pdf->SetFooterMargin(15);
+        $pdf->SetAutoPageBreak(TRUE, 20);
+        $pdf->SetFont('dejavusans', '', 9); // Base font size
+        $pdf->setRTL(true);
+        $pdf->AddPage();
+        // --- End Metadata & Setup ---
+
+
+        // --- Content: Table ---
+        // Define Column Widths (Total usable width approx 190mm for A4 Portrait)
+        $w = [
+            'id' => 15,
+            'name' => 55,
+            'gov_id' => 30,
+            'gender' => 15,
+            'dob' => 25,
+            'phone' => 30,
+            // 'grade' => 30, // Add if filtering/showing grade
+            'status' => 20, // Example status column
+        ];
+        $lineHeight = 6;
+
+        // -- Table Header --
+        $pdf->SetFont('dejavusans', 'B', 9);
+        $pdf->SetFillColor(220, 220, 220);
+        $pdf->SetTextColor(0);
+        $pdf->SetDrawColor(128);
+        $pdf->SetLineWidth(0.2);
+        $pdf->Cell($w['id'], $lineHeight, 'الرقم', 1, 0, 'C', true);
+        $pdf->Cell($w['name'], $lineHeight, 'اسم الطالب', 1, 0, 'C', true);
+        $pdf->Cell($w['gov_id'], $lineHeight, 'الرقم الوطني', 1, 0, 'C', true);
+        $pdf->Cell($w['gender'], $lineHeight, 'الجنس', 1, 0, 'C', true);
+        $pdf->Cell($w['dob'], $lineHeight, 'تاريخ الميلاد', 1, 0, 'C', true);
+        $pdf->Cell($w['phone'], $lineHeight, 'هاتف الأب', 1, 0, 'C', true);
+        $pdf->Cell($w['status'], $lineHeight, 'الحالة', 1, 1, 'C', true); // ln=1
+        $pdf->SetFont('dejavusans', '', 9);
+        $pdf->SetFillColor(255);
+
+        // -- Table Body --
+        if ($students->isEmpty()) {
+            $pdf->Cell(array_sum($w), $lineHeight * 2, 'لا يوجد طلاب لعرضهم حسب الفلتر المحدد.', 'LRB', 1, 'C');
+        } else {
+            $fill = false; // Alternate row fill
+            foreach ($students as $student) {
+                // Example Status (assuming you have a way to get current status)
+                // $status = $student->currentEnrollment?->status ?? 'غير مسجل';
+                $status = $student->approved ? 'مقبول' : 'قيد المراجعة'; // Using approval status for now
+
+                // Set background fill for row
+                 $pdf->SetFillColor($fill ? 245 : 255);
+
+                $pdf->Cell($w['id'], $lineHeight, $student->id, 'LR', 0, 'C', $fill);
+                // Use MultiCell for Name if it might wrap
+                $startX = $pdf->GetX(); $startY = $pdf->GetY();
+                $pdf->MultiCell($w['name'], $lineHeight, $student->student_name ?? '-', 0, 'R', $fill, 0, $startX, $startY, true, 0, false, true, $lineHeight, 'M');
+                 $pdf->SetXY($startX + $w['name'], $startY); // Reset position after MultiCell
+
+                $pdf->Cell($w['gov_id'], $lineHeight, $student->goverment_id ?? '-', 'R', 0, 'C', $fill);
+                $pdf->Cell($w['gender'], $lineHeight, $student->gender ?? '-', 'R', 0, 'C', $fill);
+                $pdf->Cell($w['dob'], $lineHeight, $student->date_of_birth ? $student->date_of_birth : '-', 'R', 0, 'C', $fill);
+                $pdf->Cell($w['phone'], $lineHeight, $student->father_phone ?? '-', 'R', 0, 'C', $fill);
+                $pdf->Cell($w['status'], $lineHeight, $status, 'R', 1, 'C', $fill); // ln=1 moves down
+
+                // Draw bottom border for the row
+                $pdf->Line($pdf->getMargins()['left'], $pdf->GetY(), $pdf->getPageWidth() - $pdf->getMargins()['right'], $pdf->GetY());
+                $fill = !$fill; // Toggle fill
+            }
+        }
+
+        // --- Output ---
+        $fileName = 'student_list_report.pdf';
+        // Add filters to filename if needed: e.g., 'student_list_grade_5_2024.pdf'
+        $pdf->Output($fileName, 'I');
+        exit;
     }
 }

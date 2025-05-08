@@ -35,7 +35,11 @@ class StudentFeePayment extends Model
 {
     use HasFactory;
    // Fillable needs fee_installment_id now
-   protected $fillable = [ 'fee_installment_id', 'amount', 'payment_date', 'notes' ]; // <-- Updated
+   protected $fillable = [ 'fee_installment_id', 'amount', 'payment_date', 'notes',
+   
+   'payment_method', // <-- Add payment_method
+
+]; // <-- Updated
    protected $casts = [ 'amount' => 'decimal:2', 'payment_date' => 'date:Y-m-d' ];
 
    // --- Updated Relationship ---

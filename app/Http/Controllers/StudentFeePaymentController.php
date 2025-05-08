@@ -29,7 +29,7 @@ class PaymentDetailPdf extends TCPDF
     public function Footer()
     {
         $this->SetY(-15);
-        $this->SetFont('dejavusans', 'I', 8);
+        $this->SetFont('dejavusans', '', 8);
         $this->Cell(0, 10, 'صفحة ' . $this->getAliasNumPage() . '/' . $this->getAliasNbPages(), 0, false, 'C', 0, '', 0, false, 'T', 'M');
     }
 }
@@ -49,9 +49,15 @@ class StudentFeePaymentController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'fee_installment_id' => 'required|integer|exists:fee_installments,id', // <-- Link to installment
-            'amount' => 'required|numeric|min:0.01',
             'payment_date' => 'required|date_format:Y-m-d',
             'notes' => 'nullable|string|max:1000',
+            'payment_method' => [
+                'required',
+
+                Rule::in(['cash','bank'])
+
+                // <-- Validate payment method
+            ],
             // Add validation: ensure payment amount <= remaining amount on installment?
             'amount' => [
                 'required',
@@ -82,7 +88,14 @@ class StudentFeePaymentController extends Controller
     public function update(Request $request, StudentFeePayment $studentFeePayment)
     {
         $installmentId = $studentFeePayment->fee_installment_id; // Get installment ID before update
-        $validator = Validator::make($request->all(), [ /* ... validation ... */]);
+        $validator = Validator::make($request->all(), [
+            'amount' => ['sometimes', 'required', 'numeric', 'min:0.01'], // Keep existing rules
+            'payment_date' => 'sometimes|required|date_format:Y-m-d',
+            'payment_method' => ['sometimes', 'required', Rule::in(['cash', 'bank'])], // <-- Add validation
+            'notes' => 'nullable|string|max:1000',
+            // Add overpayment check for amount here if needed
+        ]);
+        
         if ($validator->fails()) return response()->json(['message' => 'Validation Error', 'errors' => $validator->errors()], 422);
 
         DB::transaction(function () use ($studentFeePayment, $validator) {
@@ -195,7 +208,8 @@ class StudentFeePaymentController extends Controller
         // Column Widths (Approx 180mm usable)
         $w_date = 35;
         $w_amount = 45;
-        $w_notes = 100; // Flexible notes
+        $w_payment_method = 30;
+        $w_notes = 70; // Flexible notes
         $lineHeight = 7;
 
         // Header
@@ -206,6 +220,7 @@ class StudentFeePaymentController extends Controller
         $pdf->SetLineWidth(0.2);
         $pdf->Cell($w_date, $lineHeight, 'تاريخ الدفعة', 1, 0, 'C', true);
         $pdf->Cell($w_amount, $lineHeight, 'المبلغ المدفوع', 1, 0, 'C', true);
+        $pdf->Cell($w_payment_method, $lineHeight, 'طريقه الدفع', 1, 0, 'C', true);
         $pdf->Cell($w_notes, $lineHeight, 'الملاحظات', 1, 1, 'C', true);
         $pdf->SetFont('dejavusans', '', 10);
         $pdf->SetFillColor(255);
@@ -237,6 +252,7 @@ class StudentFeePaymentController extends Controller
         $pdf->SetFillColor(245, 245, 245);
         $pdf->Cell($w_date, $lineHeight, 'إجمالي الدفعات', 'TLRB', 0, 'C', true);
         $pdf->Cell($w_amount, $lineHeight, number_format((float)$feeInstallment->payments->sum('amount'), 2), 'TRB', 0, 'R', true);
+        $pdf->Cell($w_payment_method, $lineHeight, '', 'TRB', 0, 'R', true);
         $pdf->Cell($w_notes, $lineHeight, '', 'TRB', 1, 'R', true);
 
 

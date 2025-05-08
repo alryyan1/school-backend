@@ -271,7 +271,7 @@ class FeeInstallmentController extends Controller
         // Eager load necessary data
         $studentAcademicYear->load([
             'student', // Select only needed student fields
-            'academicYear,school_id', // Need school_id here
+            'academicYear', // Need school_id here
             'school', // Load school details
             'gradeLevel',
             'feeInstallments' // Load all installments

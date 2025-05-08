@@ -27,3 +27,7 @@ Route::get('/enrollments/{studentAcademicYear}/fee-statement-pdf', [FeeInstallme
  // --- NEW ROUTE for Installment Payment Details PDF ---
  Route::get('/fee-installments/{feeInstallment}/payments-pdf', [StudentFeePaymentController::class, 'generatePaymentsPdf'])
  ->name('installments.payments.pdf');
+
+    // --- Route for Student List PDF ---
+    Route::get('/reports/students/list-pdf', [StudentController::class, 'generateListPdf'])
+         ->name('reports.students.list.pdf');
