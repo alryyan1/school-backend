@@ -41,7 +41,7 @@ class SchoolController extends Controller
             'code' => 'required|string|max:50|unique:schools,code',
             'address' => 'required|string|max:255',
             'phone' => 'required|string|max:20',
-            'email' => 'required|email|max:255|unique:schools,email',
+            'email' => 'string',
             'principal_name' => 'nullable|string|max:255',
             'establishment_date' => 'nullable|date_format:Y-m-d',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // Logo validation

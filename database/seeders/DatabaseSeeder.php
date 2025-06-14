@@ -19,11 +19,11 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
 
-        $this->call(SchoolSeeder::class);
-        $this->call(GradeLevelSeeder::class);
-        $this->call(SubjectSeeder::class);
-        $this->call(StudentSeeder::class);
-        $this->call(TeacherSeeder::class);
+        // $this->call(SchoolSeeder::class);
+        // $this->call(GradeLevelSeeder::class);
+        // $this->call(SubjectSeeder::class);
+        // $this->call(StudentSeeder::class);
+        // $this->call(TeacherSeeder::class);
 
         //create admin user
 
@@ -36,13 +36,13 @@ class DatabaseSeeder extends Seeder
 
         ]);
 
-        AcademicYear::create([
-            'name'=>'2025',
-            'school_id'=>1,
-            'start_date'=>Carbon::now(),
-            'end_date'=>Carbon::now()->addMonths(12),
+        // AcademicYear::create([
+        //     'name'=>'2025',
+        //     'school_id'=>1,
+        //     'start_date'=>Carbon::now(),
+        //     'end_date'=>Carbon::now()->addMonths(12),
             
-        ]);
+        // ]);
         // \App\Models\User::factory(10)->create();
 
         // \App\Models\User::factory()->create([
