@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\UserResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
@@ -27,10 +28,12 @@ class AuthController extends Controller
         }
 
         $user = Auth::user(); // Get the authenticated User instance
+        $user = Auth::user()->loadMissing('roles', 'permissions'); // Eager load Spatie roles and permissions
+
         $token = $user->createToken('auth_token', [$user->type])->plainTextToken;
 
         return response()->json([
-            'user'=>$user,
+            'user'=>new UserResource($user),
             'token' => $token,
             'token_type' => 'Bearer',
             'user_type' => $user->type, // Include the user type in the response

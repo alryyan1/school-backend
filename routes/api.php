@@ -21,6 +21,7 @@ use App\Http\Controllers\SubjectController;
 use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\TransportRouteController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\RoleController;
 
 /*
 |--------------------------------------------------------------------------
@@ -128,4 +129,21 @@ Route::middleware('auth:sanctum')->group(function () {
      // --- Route for sending installment reminder ---
      Route::post('/notify/whatsapp/installment/{feeInstallment}', [NotificationController::class, 'sendInstallmentReminder'])
      ->name('notify.installment.whatsapp');
+
+     Route::get('/unassigned-students-for-grade', [StudentAcademicYearController::class, 'getUnassignedStudentsForGrade'])->name('enrollments.unassignedForGrade');
+     Route::put('/student-enrollments/{studentAcademicYear}/assign-classroom', [StudentAcademicYearController::class, 'assignToClassroom'])->name('enrollments.assignClassroom');
+     Route::apiResource('/student-enrollments', StudentAcademicYearController::class)->except(['show']); // show might not be needed for the manager
+     Route::apiResource('/student-fee-payments', StudentFeePaymentController::class);
+     Route::apiResource('/exams', ExamController::class);
+ 
+     // --- ROLE ROUTE ---
+     Route::get('/roles', [RoleController::class, 'index'])->name('roles.index'); // Get all roles
+ 
+     // --- USER MANAGEMENT ROUTES ---
+     Route::put('/users/{user}/password', [UserController::class, 'updatePassword'])->name('users.updatePassword');
+     Route::get('/curriculum/subjects-for-grade', [AcademicYearSubjectController::class, 'getSubjectsForGradeLevel'])->name('curriculum.subjectsForGrade');
+
+     Route::apiResource('users', UserController::class);
+     Route::post('/exams/{exam}/quick-add-schedules', [ExamScheduleController::class, 'quickAddSchedulesForGrade'])->name('exams.schedules.quickAdd'); // <-- New Route
+     Route::apiResource('/exam-schedules', ExamScheduleController::class);
 });

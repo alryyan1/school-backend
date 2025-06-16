@@ -9,11 +9,38 @@ use App\Models\Subject;
 use App\Models\Teacher;
 use Illuminate\Http\Request;
 use App\Http\Resources\AcademicYearSubjectResource;
+use App\Http\Resources\SubjectResource;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
 class AcademicYearSubjectController extends Controller
 {
+
+     /**
+     * Get subjects assigned to a specific grade level for a given academic year and school.
+     * GET /api/curriculum/subjects-for-grade
+     */
+    public function getSubjectsForGradeLevel(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'academic_year_id' => 'required|integer|exists:academic_years,id',
+            'grade_level_id' => 'required|integer|exists:grade_levels,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => ' Academic Year, and Grade Level are required', 'errors' => $validator->errors()], 422);
+        }
+
+        $subjects = Subject::whereHas('academicYearSubjects', function ($query) use ($request) {
+            $query
+                  ->where('academic_year_id', $request->input('academic_year_id'))
+                  ->where('grade_level_id', $request->input('grade_level_id'));
+        })
+        ->orderBy('name')
+        ->get();
+
+        return SubjectResource::collection($subjects);
+    }
     /**
      * Display a listing of the resource, filtered by year and grade level.
      * This is the primary method for the UI we're building.

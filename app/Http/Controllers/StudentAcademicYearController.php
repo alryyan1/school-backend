@@ -125,12 +125,8 @@ class StudentAcademicYearController extends Controller
                 })
             ],
             'grade_level_id' => 'required|integer|exists:grade_levels,id',
-            'fees'=>[
-                'required',
-                'integer',
-                new MaxAmountBasedOnGrade($request->input('school_id'),$request->input('grade_level_id')),
-            ],
-            'discount'=>'required|integer|in:0,10,20,30,40',
+            'fees'=>'nullable',
+            'discount'=>'nullable|integer|in:0,10,20,30,40',
             'classroom_id' => [
                 'nullable',
                 'integer',
@@ -157,16 +153,16 @@ class StudentAcademicYearController extends Controller
     /**
      * Update the specified resource (mainly status or classroom).
      */
-    public function update(Request $request, StudentAcademicYear $studentAcademicYear) // Route model binding
+    public function update(Request $request, StudentAcademicYear $student_enrollment) // Route model binding
     {
         $validator = Validator::make($request->all(), [
             'classroom_id' => [
                 'nullable',
                 'integer',
-                Rule::exists('classrooms', 'id')->where(function ($query) use ($studentAcademicYear) {
+                Rule::exists('classrooms', 'id')->where(function ($query) use ($student_enrollment) {
                     // Ensure new classroom belongs to the correct school and grade
-                    $query->where('school_id', $studentAcademicYear->school_id)
-                        ->where('grade_level_id', $studentAcademicYear->grade_level_id);
+                    $query->where('school_id', $student_enrollment->school_id)
+                        ->where('grade_level_id', $student_enrollment->grade_level_id);
                 }),
             ],
             'status' => ['sometimes', 'required', Rule::in(['active', 'transferred', 'graduated', 'withdrawn'])],
@@ -177,9 +173,9 @@ class StudentAcademicYearController extends Controller
             return response()->json(['message' => 'خطأ في التحقق', 'errors' => $validator->errors()], 422);
         }
 
-        $studentAcademicYear->update($validator->validated());
+        $student_enrollment->update($validator->validated());
 
-        return new StudentAcademicYearResource($studentAcademicYear->fresh()->load(['student', 'academicYear', 'gradeLevel', 'classroom', 'school']));
+        return new StudentAcademicYearResource($student_enrollment->fresh()->load(['student', 'academicYear', 'gradeLevel', 'classroom', 'school']));
     }
 
     /**
@@ -282,6 +278,88 @@ class StudentAcademicYearController extends Controller
 
         return StudentAcademicYearResource::collection($enrollments);
     }
+
+
+  /**
+     * Get students enrolled in a specific grade level for a year/school,
+     * filtering by those NOT assigned to a classroom.
+     * GET /api/unassigned-students-for-grade
+     */
+    public function getUnassignedStudentsForGrade(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'school_id' => 'required|integer|exists:schools,id',
+            'academic_year_id' => 'required|integer|exists:academic_years,id',
+            'grade_level_id' => 'required|integer|exists:grade_levels,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => 'School, Year, and Grade Level are required', 'errors' => $validator->errors()], 422);
+        }
+
+        $unassignedEnrollments = StudentAcademicYear::with([
+                'student:id,student_name,goverment_id,image', // Include student image
+                'gradeLevel:id,name', // For context, though filtered by it
+            ])
+            ->where('school_id', $request->input('school_id'))
+            ->where('academic_year_id', $request->input('academic_year_id'))
+            ->where('grade_level_id', $request->input('grade_level_id'))
+            ->whereNull('classroom_id') // <-- Key filter
+            ->where('status', 'active')   // Only active students
+            ->join('students', 'student_academic_years.student_id', '=', 'students.id')
+            ->orderBy('students.student_name')
+            ->select('student_academic_years.*') // Select all from the pivot
+            ->get();
+
+        return StudentAcademicYearResource::collection($unassignedEnrollments);
+    }
+
+    /**
+     * Assign a student enrollment to a classroom (or unassign by passing null).
+     * PUT /api/student-enrollments/{studentAcademicYear}/assign-classroom
+     */
+    public function assignToClassroom(Request $request, StudentAcademicYear $studentAcademicYear)
+    {
+        // Authorization check: Can current user manage this enrollment/classroom assignment?
+        // $this->authorize('update', $studentAcademicYear);
+
+        $validator = Validator::make($request->all(), [
+            'classroom_id' => [
+                'nullable', // Allow unassigning
+                'integer',
+                Rule::exists('classrooms', 'id')->where(function ($query) use ($studentAcademicYear) {
+                    // Ensure classroom belongs to the same school and grade level as the enrollment
+                    $query->where('school_id', $studentAcademicYear->school_id)
+                          ->where('grade_level_id', $studentAcademicYear->grade_level_id);
+                }),
+            ],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => 'Validation Error', 'errors' => $validator->errors()], 422);
+        }
+
+        // Check classroom capacity (Simplified - real check might be more complex)
+        $classroomId = $request->input('classroom_id');
+        if ($classroomId) {
+            $classroom = \App\Models\Classroom::find($classroomId);
+            if ($classroom) {
+                $currentOccupancy = StudentAcademicYear::where('classroom_id', $classroomId)
+                                    ->where('academic_year_id', $studentAcademicYear->academic_year_id) // For current year
+                                    ->where('status', 'active')
+                                    ->count();
+                if ($currentOccupancy >= $classroom->capacity) {
+                    return response()->json(['message' => 'الفصل الدراسي ممتلئ، لا يمكن إضافة المزيد من الطلاب.'], 422);
+                }
+            }
+        }
+
+        $studentAcademicYear->classroom_id = $classroomId; // Assign or unassign (if null)
+        $studentAcademicYear->save();
+
+        return new StudentAcademicYearResource($studentAcademicYear->fresh()->load(['student', 'classroom', 'gradeLevel']));
+    }
+
       /**
      * Display the specified resource.
      */

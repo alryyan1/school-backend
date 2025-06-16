@@ -27,7 +27,9 @@ class ClassroomResource extends JsonResource
             'school' => new SchoolResource($this->whenLoaded('school')),
             'created_at' => $this->created_at->toIso8601String(),
             'updated_at' => $this->updated_at->toIso8601String(),
-            'students_count' => $this->whenCounted('studentAssignments', $this->students_count)
+            'students_count' => $this->whenCounted('studentAssignments', $this->students_count),
+            'student_enrollments' => StudentAcademicYearResource::collection($this->whenLoaded('enrollments')), // <-- Add this
+
         ];
     }
 }
