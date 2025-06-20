@@ -25,8 +25,10 @@ class ClassroomResource extends JsonResource
             'grade_level' => new GradeLevelResource($this->whenLoaded('gradeLevel')),
             'homeroom_teacher' => new TeacherResource($this->whenLoaded('homeroomTeacher')),
             'school' => new SchoolResource($this->whenLoaded('school')),
-            'created_at' => $this->created_at->toIso8601String(),
-            'updated_at' => $this->updated_at->toIso8601String(),
+
+            //null safe
+            'created_at' => $this->created_at ? $this->created_at->toIso8601String() : null,
+            'updated_at' => $this->updated_at ? $this->updated_at->toIso8601String() : null,
             'students_count' => $this->whenCounted('studentAssignments', $this->students_count),
             'student_enrollments' => StudentAcademicYearResource::collection($this->whenLoaded('enrollments')), // <-- Add this
 

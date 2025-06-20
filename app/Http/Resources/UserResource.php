@@ -23,8 +23,10 @@ class UserResource extends JsonResource
             'phone' => $this->phone,
             'gender' => $this->gender,
             'email_verified_at' => $this->email_verified_at ? $this->email_verified_at->toIso8601String() : null,
-            'created_at' => $this->created_at->toIso8601String(),
-            'updated_at' => $this->updated_at->toIso8601String(),
+
+            //null safe
+            'created_at' => $this->created_at ? $this->created_at->toIso8601String() : null,
+            'updated_at' => $this->updated_at ? $this->updated_at->toIso8601String() : null,
              // Add Spatie roles and permissions
              'roles' => $this->whenLoaded('roles', $this->getRoleNames()), // Collection of role names
              'permissions' => $this->whenLoaded('permissions', $this->getAllPermissions()->pluck('name')), // Collection of permission names

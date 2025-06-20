@@ -22,8 +22,10 @@ class SubjectResource extends JsonResource
             // 'is_active' => $this->is_active, // Add if exists
             // 'credit_hours' => $this->credit_hours, // Add if exists
             // 'type' => $this->type, // Add if exists
-            'created_at' => $this->created_at->toIso8601String(),
-            'updated_at' => $this->updated_at->toIso8601String(),
+
+            //null safe
+            'created_at' => $this->created_at ? $this->created_at->toIso8601String() : null,
+            'updated_at' => $this->updated_at ? $this->updated_at->toIso8601String() : null,
         ];
     }
 }

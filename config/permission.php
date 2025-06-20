@@ -14,6 +14,7 @@ return [
          */
 
         'permission' => Spatie\Permission\Models\Permission::class,
+        'user' => App\Models\User::class, // ← تأكد من أن هذا هو مسار الموديل الصحيح
 
         /*
          * When using the "HasRoles" trait from this package, we need to know which

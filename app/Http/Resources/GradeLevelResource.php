@@ -19,8 +19,10 @@ class GradeLevelResource extends JsonResource
             'name' => $this->name,
             'code' => $this->code,
             'description' => $this->description,
-            'created_at' => $this->created_at?->toIso8601String(), // Add null safe operator
-            'updated_at' => $this->updated_at?->toIso8601String(), // Add null safe operator
+
+            //null safe
+            'created_at' => $this->created_at ? $this->created_at->toIso8601String() : null,
+            'updated_at' => $this->updated_at ? $this->updated_at->toIso8601String() : null,
         ];
 
         // Conditionally add pivot data if loaded via relationship

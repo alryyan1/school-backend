@@ -5,6 +5,7 @@ namespace Database\Seeders;
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 
 use App\Models\AcademicYear;
+use App\Models\Student;
 use App\Models\Teacher;
 use App\Models\User;
 use Carbon\Carbon;
@@ -29,14 +30,18 @@ class DatabaseSeeder extends Seeder
         //create admin user
 
         User::create([
-            'username' => 'roony',
-            'password' => bcrypt('alryyan1'),
-            'email' => 'alryyan.dev@gmail.com',
-            'name' => 'alryyan',
+            'username' => 'admin',
+            'password' => bcrypt('admin123'),
+            'email' => 'admin@gmail.com',
+            'name' => 'admin',
             'role'=>'admin'
 
         ]);
+        // Student::truncate();
+        // \Illuminate\Support\Facades\Schema::enableForeignKeyConstraints();
 
+        // Create 10 fake students using the factory
+        Student::factory()->count(10)->create();
         // AcademicYear::create([
         //     'name'=>'2025',
         //     'school_id'=>1,

@@ -108,4 +108,45 @@ class ExamController extends Controller
 
         return response()->json(['message' => 'تم حذف دورة الامتحان بنجاح.'], 200);
     }
+     /**
+     * Get exams relevant to a specific student, typically for their
+     * current school and active academic year.
+     * GET /api/students/{student}/relevant-exams
+     */
+    public function getRelevantExamsForStudent(Request $request, Student $student)
+    {
+        // $this->authorize('viewExamsForStudent', $student);
+
+        // Find the student's active enrollment for the system's active year (or a passed year_id)
+        $activeAcademicYear = AcademicYear::where('is_current', true)
+                                          // Optionally filter by school if student is linked to ONE school
+                                          // ->where('school_id', $student->school_id) // If student has a school_id
+                                          ->first();
+
+        if (!$activeAcademicYear) {
+            // Or, if student can have multiple enrollments, find their latest active one.
+            // This logic depends on how you determine a student's "current" context.
+            // For simplicity, using system's active year for now.
+            return response()->json(['data' => []]); // No active year, no relevant exams
+        }
+
+        // Find the student's enrollment for this active year
+        $enrollment = $student->enrollments() // Assumes Student model has enrollments() relationship
+                              ->where('academic_year_id', $activeAcademicYear->id)
+                              ->where('status', 'active')
+                              ->first();
+
+        if (!$enrollment) {
+            return response()->json(['data' => []]); // Not actively enrolled in the current year
+        }
+
+        // Get exams for the school of this enrollment
+        $exams = Exam::with('school')
+                     ->where('school_id', $enrollment->school_id) // Use school_id from enrollment
+                     ->where('academic_year_id', $activeAcademicYear->id) // Filter by academic year of the exam
+                     ->orderBy('start_date', 'desc')
+                     ->get();
+
+        return ExamResource::collection($exams);
+    }
 }

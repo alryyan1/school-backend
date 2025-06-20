@@ -22,8 +22,10 @@ class ExamResource extends JsonResource
             'end_date' => $this->end_date,     // Formatted by cast
             'description' => $this->description,
             'school' => new SchoolResource($this->whenLoaded('school')), // Load in controller
-            'created_at' => $this->created_at->toIso8601String(),
-            'updated_at' => $this->updated_at->toIso8601String(),
+
+            //null safe
+            'created_at' => $this->created_at ? $this->created_at->toIso8601String() : null,
+            'updated_at' => $this->updated_at ? $this->updated_at->toIso8601String() : null,
         ];
     }
 }

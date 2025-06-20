@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\VerificationController;
 use App\Http\Controllers\ClassroomController;
 use App\Http\Controllers\ExamController;
+use App\Http\Controllers\ExamResultController;
 use App\Http\Controllers\ExamScheduleController;
 use App\Http\Controllers\FeeInstallmentController;
 use App\Http\Controllers\GradeLevelController;
@@ -146,4 +147,17 @@ Route::middleware('auth:sanctum')->group(function () {
      Route::apiResource('users', UserController::class);
      Route::post('/exams/{exam}/quick-add-schedules', [ExamScheduleController::class, 'quickAddSchedulesForGrade'])->name('exams.schedules.quickAdd'); // <-- New Route
      Route::apiResource('/exam-schedules', ExamScheduleController::class);
+     Route::apiResource('/exam-schedules', ExamScheduleController::class);
+     // --- EXAM RESULT ROUTES ---
+     Route::get('/students/{student}/relevant-exams', [ExamController::class, 'getRelevantExamsForStudent'])->name('students.relevantExams');
+     Route::get('/exam-schedules/{examSchedule}/results', [ExamResultController::class, 'getResultsForSchedule']);
+     Route::get('/exam-schedules/{examSchedule}/pending-students-for-results', [ExamResultController::class, 'getPendingStudentsForResults']);
+     Route::post('/exam-schedules/{examSchedule}/results/bulk-upsert', [ExamResultController::class, 'bulkUpsertResults']);
+     // Keep these if you want to manage individual results, otherwise, they can be removed
+     Route::apiResource('/exam-results', ExamResultController::class)->except(['index', 'store']);
+
+    // --- ROLE & PERMISSION ROUTES ---
+    Route::get('/permissions', [RoleController::class, 'getAllPermissions'])->name('permissions.index'); // <-- THIS IS THE ROUTE
+    Route::apiResource('/roles', RoleController::class);
+    // --- End Role & Permission Routes ---
 });

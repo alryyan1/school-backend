@@ -6,80 +6,81 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
-/**
- * 
- *
- * @property int $id
- * @property int $exam_id
- * @property int $subject_id
- * @property int $grade_level_id
- * @property int|null $classroom_id
- * @property int|null $teacher_id
- * @property \Illuminate\Support\Carbon $exam_date
- * @property string $start_time
- * @property string $end_time
- * @property string $max_marks
- * @property string|null $pass_marks
- * @property \Illuminate\Support\Carbon|null $created_at
- * @property \Illuminate\Support\Carbon|null $updated_at
- * @property-read \App\Models\Classroom|null $classroom
- * @property-read \App\Models\Exam $exam
- * @property-read \App\Models\GradeLevel $gradeLevel
- * @property-read \App\Models\Subject $subject
- * @property-read \App\Models\Teacher|null $teacher
- * @method static \Database\Factories\ExamScheduleFactory factory($count = null, $state = [])
- * @method static \Illuminate\Database\Eloquent\Builder|ExamSchedule newModelQuery()
- * @method static \Illuminate\Database\Eloquent\Builder|ExamSchedule newQuery()
- * @method static \Illuminate\Database\Eloquent\Builder|ExamSchedule query()
- * @method static \Illuminate\Database\Eloquent\Builder|ExamSchedule whereClassroomId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|ExamSchedule whereCreatedAt($value)
- * @method static \Illuminate\Database\Eloquent\Builder|ExamSchedule whereEndTime($value)
- * @method static \Illuminate\Database\Eloquent\Builder|ExamSchedule whereExamDate($value)
- * @method static \Illuminate\Database\Eloquent\Builder|ExamSchedule whereExamId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|ExamSchedule whereGradeLevelId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|ExamSchedule whereId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|ExamSchedule whereMaxMarks($value)
- * @method static \Illuminate\Database\Eloquent\Builder|ExamSchedule wherePassMarks($value)
- * @method static \Illuminate\Database\Eloquent\Builder|ExamSchedule whereStartTime($value)
- * @method static \Illuminate\Database\Eloquent\Builder|ExamSchedule whereSubjectId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|ExamSchedule whereTeacherId($value)
- * @method static \Illuminate\Database\Eloquent\Builder|ExamSchedule whereUpdatedAt($value)
- * @mixin \Eloquent
- */
 class ExamSchedule extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'exam_id',
-        'subject_id',
-        'grade_level_id',
-        'classroom_id',
-        'teacher_id', // Invigilator
-        'exam_date',
-        'start_time',
-        'end_time',
-        'max_marks',
-        'pass_marks',
+        'exam_id',          // Link to the overall Exam period
+        'subject_id',       // Which subject
+        'grade_level_id',   // Which grade level is taking this specific scheduled exam
+        'classroom_id',     // Optional: Specific room
+        'teacher_id',       // Optional: Invigilator (User ID)
+        'exam_date',        // Date of this specific exam
+        'start_time',       // Start time (e.g., '09:00:00')
+        'end_time',         // End time (e.g., '11:00:00')
+        'max_marks',        // Maximum marks for this exam instance
+        'pass_marks',       // Passing marks for this exam instance
     ];
 
     protected $casts = [
-        'exam_date' => 'date:Y-m-d',
-        // Times are often fine as strings, but casting can help
-        // 'start_time' => 'datetime:H:i', // Or just use string
-        // 'end_time' => 'datetime:H:i',   // Or just use string
-        'max_marks' => 'decimal:2',
-        'pass_marks' => 'decimal:2',
+        'exam_date' => 'date:Y-m-d', // Ensures it's treated as a date object and formatted
+        // Times are often stored as strings (TIME type in DB), casting is optional
+        // 'start_time' => 'datetime:H:i:s', // If you want Carbon instances for time
+        // 'end_time' => 'datetime:H:i:s',
+        'max_marks' => 'decimal:2',    // Store with 2 decimal places
+        'pass_marks' => 'decimal:2',   // Store with 2 decimal places
     ];
 
-    // Relationships
-    public function exam(): BelongsTo { return $this->belongsTo(Exam::class); }
-    public function subject(): BelongsTo { return $this->belongsTo(Subject::class); }
-    public function gradeLevel(): BelongsTo { return $this->belongsTo(GradeLevel::class); }
-    public function classroom(): BelongsTo { return $this->belongsTo(Classroom::class); } // Nullable
-    public function teacher(): BelongsTo { return $this->belongsTo(Teacher::class); }   // Nullable (Invigilator)
+    /**
+     * The Exam period this schedule belongs to.
+     */
+    public function exam(): BelongsTo
+    {
+        return $this->belongsTo(Exam::class);
+    }
 
-    // Add relationship to results later if needed
-    // public function results() { return $this->hasMany(ExamResult::class); }
+    /**
+     * The Subject for this scheduled exam.
+     */
+    public function subject(): BelongsTo
+    {
+        return $this->belongsTo(Subject::class);
+    }
+
+    /**
+     * The GradeLevel for this scheduled exam.
+     */
+    public function gradeLevel(): BelongsTo
+    {
+        return $this->belongsTo(GradeLevel::class);
+    }
+
+    /**
+     * The Classroom where this exam is scheduled (optional).
+     */
+    public function classroom(): BelongsTo
+    {
+        return $this->belongsTo(Classroom::class); // classroom_id is nullable
+    }
+
+    /**
+     * The Teacher assigned as invigilator (optional).
+     * Assumes 'teacher_id' on exam_schedules links to 'id' on 'users' table if teachers are users.
+     * Or, if you have a separate Teachers model, link to that.
+     */
+    public function teacher(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'teacher_id'); // Or Teacher::class if you have a dedicated Teacher model
+    }
+
+    /**
+     * Get the results associated with this specific exam schedule.
+     */
+    public function results(): HasMany
+    {
+        return $this->hasMany(ExamResult::class);
+    }
 }
