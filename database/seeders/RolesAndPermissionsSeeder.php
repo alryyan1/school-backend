@@ -1,11 +1,12 @@
 <?php
 
-namespace Database\\Seeders;
+namespace Database\Seeders;
 
-use Illuminate\\Database\Seeder;
+use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
 use App\Models\User; // Import User model
+use Hash;
 
 class RolesAndPermissionsSeeder extends Seeder
 {
