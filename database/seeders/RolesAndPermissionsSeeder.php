@@ -160,8 +160,8 @@ class RolesAndPermissionsSeeder extends Seeder
         // --- Create Users and Assign Roles (Example) ---
         // Ensure these users are created with your desired initial passwords
         // Super Managers
-        $sm1 = User::firstOrCreate(['email' => 'supermanager1@example.com'], [
-            'name' => 'Super Manager One', 'username' => 'supermanager1', 'password' => Hash::make('password'), 'role' => 'admin' // Main role column
+        $sm1 = User::firstOrCreate(['email' => 'superadmin@gmail.com'], [
+            'name' => 'Super admin ', 'username' => 'superadmin', 'password' => Hash::make('12345678'), 'role' => 'admin' // Main role column
         ]);
         $sm1->assignRole('super-manager'); // Spatie role
 
