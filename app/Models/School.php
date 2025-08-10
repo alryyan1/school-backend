@@ -5,6 +5,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -56,6 +57,7 @@ class School extends Model
         'principal_name',
         'establishment_date',
         'logo', // Path to logo file
+        'user_id', // Manager/User assigned to this school
         // 'is_active', // Uncomment if added later
     ];
     /**
@@ -81,6 +83,13 @@ class School extends Model
     // Add other relationships like academicYears if needed
     public function academicYears(): HasMany {
          return $this->hasMany(AcademicYear::class);
+     }
+
+    /**
+     * Get the user (manager) assigned to this school.
+     */
+    public function user(): BelongsTo {
+        return $this->belongsTo(User::class);
      }
 
     // Define relationships here if needed in the future

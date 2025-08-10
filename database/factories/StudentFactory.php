@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\Student;
 use App\Models\User;
+use App\Models\School;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Arr;
 use Carbon\Carbon; // For date manipulation
@@ -56,7 +57,7 @@ class StudentFactory extends Factory
             'date_of_birth' => $this->faker->dateTimeBetween('-18 years', '-5 years')->format('Y-m-d'),
             'gender' => $gender,
             'goverment_id' => $this->faker?->optional(0.8)->unique()?->numerify('###########'), // 80% chance
-            'wished_level' => $this->faker?->randomElement(['روضه', 'ابتدائي', 'متوسط', 'ثانوي']),
+            'wished_school' => School::inRandomOrder()->first()?->id ?? null,
             'medical_condition' => $this->faker?->optional(0.05)->randomElement(['ربو خفيف', 'حساسية قمح', 'لا يوجد']),
             'referred_school' => $this->faker?->optional(0.2)->randomElement(['مدرسة التفوق', 'مدرسة الإبداع', 'مدرسة الأوائل']),
             'success_percentage' => $this->faker?->optional(0.5)->numberBetween(60, 99),
@@ -92,5 +93,71 @@ class StudentFactory extends Factory
 
             // Timestamps are handled automatically
         ];
+    }
+
+    /**
+     * Indicate that the student is approved.
+     */
+    public function approved(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'approved' => true,
+            'aproove_date' => now(),
+            'approved_by_user' => User::where('role', 'admin')->inRandomOrder()->first()?->id ?? null,
+            'message_sent' => $this->faker->boolean(60),
+        ]);
+    }
+
+    /**
+     * Indicate that the student is pending approval.
+     */
+    public function pending(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'approved' => false,
+            'aproove_date' => null,
+            'approved_by_user' => null,
+            'message_sent' => false,
+        ]);
+    }
+
+    /**
+     * Assign a specific school as wished school.
+     */
+    public function withWishedSchool(School $school): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'wished_school' => $school->id,
+        ]);
+    }
+
+    /**
+     * Create a student with no wished school.
+     */
+    public function withoutWishedSchool(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'wished_school' => null,
+        ]);
+    }
+
+    /**
+     * Create a male student.
+     */
+    public function male(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'gender' => 'ذكر',
+        ]);
+    }
+
+    /**
+     * Create a female student.
+     */
+    public function female(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'gender' => 'انثي',
+        ]);
     }
 }

@@ -30,6 +30,15 @@ class SchoolResource extends JsonResource
             'establishment_date' => $this->establishment_date, // Formatted by $casts
             'logo_path' => $this->logo, // Raw path
             'logo_url' => $logoUrl, // Full URL for display
+            'user_id' => $this->user_id, // Manager/User ID
+            'user' => $this->whenLoaded('user', function () {
+                return [
+                    'id' => $this->user->id,
+                    'name' => $this->user->name,
+                    'username' => $this->user->username,
+                    'email' => $this->user->email,
+                ];
+            }),
             // 'is_active' => $this->is_active, // Uncomment if added later
             'created_at' => $this->created_at->toIso8601String(),
             'updated_at' => $this->updated_at->toIso8601String(),

@@ -22,7 +22,7 @@ class SchoolController extends Controller
         // $this->authorize('viewAny', School::class);
 
         // Get all schools, ordered if desired
-        $schools = School::withCount('classrooms')->orderBy('name')->get(); // Use get() instead of paginate()
+        $schools = School::withCount('classrooms')->with('user')->orderBy('name')->get(); // Use get() instead of paginate()
 
         // Return a resource collection (still good practice for consistent format)
         return SchoolResource::collection($schools);
@@ -45,6 +45,7 @@ class SchoolController extends Controller
             'principal_name' => 'nullable|string|max:255',
             'establishment_date' => 'nullable|date_format:Y-m-d',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // Logo validation
+            'user_id' => 'nullable|integer|exists:users,id', // User/Manager assignment
             // 'is_active' => 'sometimes|boolean', // Uncomment if added later
         ]);
 
@@ -77,6 +78,7 @@ class SchoolController extends Controller
     {
         // Optional: Authorization check
         // $this->authorize('view', $school);
+        $school->load('user'); // Load the user relationship
         return new SchoolResource($school);
     }
 
@@ -97,6 +99,7 @@ class SchoolController extends Controller
             'principal_name' => 'nullable|string|max:255',
             'establishment_date' => 'nullable|date_format:Y-m-d',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // Validate new logo
+            'user_id' => 'nullable|integer|exists:users,id', // User/Manager assignment
             // 'is_active' => 'sometimes|boolean', // Uncomment if added later
         ]);
 

@@ -10,6 +10,8 @@ use Database\Seeders\GradeLevelSeeder;
 use Database\Seeders\SchoolSeeder;
 use Database\Seeders\SchoolGradeLevelSeeder;
 use Database\Seeders\UserSeeder;
+use Database\Seeders\ClassroomSeeder;
+use Database\Seeders\StudentSeeder;
 
 use Illuminate\Database\Seeder;
 
@@ -31,13 +33,13 @@ class DatabaseSeeder extends Seeder
             GradeLevelSeeder::class,
             // --- Linking/Pivot Table Data (Run after base entities) ---
             SchoolGradeLevelSeeder::class, // <-- Assigns Grades to Schools with fees
+            ClassroomSeeder::class, // <-- Creates classrooms for each school-grade assignment
             RolesAndPermissionsSeeder::class,
             // --- Other Seeders that use factories and might need the above data ---
+            StudentSeeder::class,
             // TeacherSeeder::class,
             // AcademicYearSeeder::class,
-            // ClassroomSeeder::class,
             // ExamSeeder::class,
-            // StudentSeeder::class,
         ]);
        
     }

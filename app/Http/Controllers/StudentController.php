@@ -40,7 +40,7 @@ class StudentController extends Controller
 {
     public function index()
     {
-        $students = Student::all();
+        $students = Student::with('wishedSchool','enrollments.school','enrollments.gradeLevel','enrollments.academicYear','enrollments.classroom')->get();
         return  StudentResource::collection($students);
     }
     public function updatePhoto(Request $request, Student $student)
@@ -110,7 +110,7 @@ class StudentController extends Controller
             'mother_phone' => 'required|string|max:20',
             'mother_whatsapp' => 'nullable|string|max:20',
             'date_of_birth' => 'required|date',
-            'wished_level' => 'required|in:روضه,ابتدائي,متوسط,ثانوي',
+            'wished_school' => 'required|exists:schools,id',
         ]);
 
         if ($validator->fails()) {
@@ -136,6 +136,13 @@ class StudentController extends Controller
         if (!$student) {
             return response()->json(['message' => 'Student not found'], 404); // Not Found
         }
+        $student->load([
+            'wishedSchool',
+            'enrollments.school',
+            'enrollments.gradeLevel',
+            'enrollments.academicYear',
+            'enrollments.classroom',
+        ]);
         return new StudentResource($student);
     }
 
@@ -158,7 +165,7 @@ class StudentController extends Controller
             'mother_phone' => 'required|string|max:20',
             'mother_whatsapp' => 'nullable|string|max:20',
             'date_of_birth' => 'required|date',
-            'wished_level' => 'required|in:روضه,ابتدائي,متوسط,ثانوي',
+            'wished_school' => 'required|exists:schools,id',
         ]);
 
         if ($validator->fails()) {
@@ -178,6 +185,34 @@ class StudentController extends Controller
         $student->delete();
 
         return response()->json(['message' => 'Student deleted'], 204); // No Content (successful deletion)
+    }
+
+    /**
+     * Accept a student application.
+     *
+     * @param  \App\Models\Student  $student
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function accept(Student $student)
+    {
+        if (!$student) {
+            return response()->json(['message' => 'Student not found'], 404);
+        }
+
+        if ($student->approved) {
+            return response()->json(['message' => 'Student is already approved'], 400);
+        }
+
+        $student->update([
+            'approved' => true,
+            'aproove_date' => now(),
+            'approved_by_user' => auth()->id(),
+        ]);
+
+        return response()->json([
+            'message' => 'Student accepted successfully',
+            'student' => new StudentResource($student->load('wishedSchool'))
+        ]);
     }
 
     /**
@@ -275,7 +310,7 @@ class StudentController extends Controller
         $printRow('الاسم الكامل', $student->student_name, true); // Make name bold
         $printRow('تاريخ الميلاد', $student->date_of_birth ? $student->date_of_birth: null); // Format date
         $printRow('الجنس', $student->gender);
-        $printRow('المرحلة المرغوبة', $student->wished_level);
+        $printRow('المدرسة المرغوبة', $student->wishedSchool ? $student->wishedSchool->name : null);
         $printRow('الرقم الوطني', $student->goverment_id);
         // $printRow('البريد الإلكتروني', $student->email);
         $printRow('المدرسة السابقة', $student->referred_school);
@@ -356,41 +391,81 @@ class StudentController extends Controller
         // Authorization check (e.g., only admins/teachers)
         // $this->authorize('viewAny', Student::class);
 
-        // --- Fetch Students with Filters (Example) ---
-        $query = Student::query(); // Start query builder
+        // --- Fetch Students with Filters ---
+        $query = Student::with('wishedSchool'); // Start query builder with relationship
 
-        // Example Filters (Adapt based on your needs and how students relate to grades/status)
-        // If status is directly on students table (it's not in your migration)
-        // if ($request->filled('status')) {
-        //     $query->where('status', $request->input('status'));
-        // }
-
-        // If filtering by GradeLevel (requires relationship via StudentAcademicYear)
-        // This assumes you want students currently enrolled in a grade for the active year
-        if ($request->filled('grade_level_id') && $request->filled('academic_year_id')) {
-             $query->whereHas('enrollments', function ($q) use ($request) {
-                 $q->where('academic_year_id', $request->input('academic_year_id'))
-                   ->where('grade_level_id', $request->input('grade_level_id'))
-                   ->where('status', 'active'); // Only active enrollments
-             });
+        // Search term filter
+        if ($request->filled('search')) {
+            $searchTerm = $request->input('search');
+            $query->where(function($q) use ($searchTerm) {
+                $q->where('student_name', 'like', '%' . $searchTerm . '%')
+                  ->orWhere('father_name', 'like', '%' . $searchTerm . '%')
+                  ->orWhere('mother_name', 'like', '%' . $searchTerm . '%')
+                  ->orWhere('father_phone', 'like', '%' . $searchTerm . '%')
+                  ->orWhere('goverment_id', 'like', '%' . $searchTerm . '%');
+            });
         }
-        // Add other filters as needed (e.g., school_id via enrollment)
 
-        $students = $query->orderBy('id')->get();
+        // Wished school filter
+        if ($request->filled('wished_school_id')) {
+            $query->where('wished_school', $request->input('wished_school_id'));
+        }
+
+        // Date range filter
+        if ($request->filled('date_type') && ($request->filled('start_date') || $request->filled('end_date'))) {
+            $dateType = $request->input('date_type');
+            if ($request->filled('start_date')) {
+                $query->where($dateType, '>=', $request->input('start_date'));
+            }
+            if ($request->filled('end_date')) {
+                $query->where($dateType, '<=', $request->input('end_date'));
+            }
+        }
+
+        // Sorting
+        $sortBy = $request->input('sort_by', 'id');
+        $sortOrder = $request->input('sort_order', 'desc');
+        $query->orderBy($sortBy, $sortOrder);
+
+        $students = $query->get();
         // --- End Fetch Students ---
 
 
         // --- PDF Creation ---
         $pdf = new StudentListPdf('P', PDF_UNIT, 'A4', true, 'UTF-8', false); // Portrait A4
 
-        // --- Optional: Set Filter Info for Header ---
+        // --- Set Filter Info for Header ---
         $filterText = "جميع الطلاب"; // Default
-        // Build filter text based on request parameters (example)
-        // if ($request->filled('grade_level_id')) {
-        //     $grade = \App\Models\GradeLevel::find($request->input('grade_level_id'));
-        //     $filterText = "طلاب " . ($grade->name ?? 'مرحلة محددة');
-        // }
-        // $pdf->filterInfo = $filterText;
+        $filters = [];
+        
+        if ($request->filled('search')) {
+            $filters[] = "بحث: " . $request->input('search');
+        }
+        
+        if ($request->filled('wished_school_id')) {
+            $school = \App\Models\School::find($request->input('wished_school_id'));
+            if ($school) {
+                $filters[] = "المدرسة: " . $school->name;
+            }
+        }
+        
+        if ($request->filled('date_type') && ($request->filled('start_date') || $request->filled('end_date'))) {
+            $dateType = $request->input('date_type') === 'created_at' ? 'تاريخ التسجيل' : 'تاريخ الميلاد';
+            $dateRange = [];
+            if ($request->filled('start_date')) {
+                $dateRange[] = "من: " . $request->input('start_date');
+            }
+            if ($request->filled('end_date')) {
+                $dateRange[] = "إلى: " . $request->input('end_date');
+            }
+            $filters[] = $dateType . " (" . implode(' - ', $dateRange) . ")";
+        }
+        
+        if (!empty($filters)) {
+            $filterText = "فلترة: " . implode(' | ', $filters);
+        }
+        
+        $pdf->filterInfo = $filterText;
         // --- End Filter Info ---
 
 
@@ -472,7 +547,9 @@ class StudentController extends Controller
 
         // --- Output ---
         $fileName = 'student_list_report.pdf';
-        // Add filters to filename if needed: e.g., 'student_list_grade_5_2024.pdf'
+        if (!empty($filters)) {
+            $fileName = 'student_list_filtered_' . date('Y-m-d_H-i-s') . '.pdf';
+        }
         $pdf->Output($fileName, 'I');
         exit;
     }

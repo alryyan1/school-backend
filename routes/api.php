@@ -23,6 +23,7 @@ use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\TransportRouteController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\StudentNoteController;
 
 /*
 |--------------------------------------------------------------------------
@@ -73,6 +74,7 @@ Route::middleware('auth:sanctum')->get('/dashboard-stats', function () {
 Route::middleware('auth:sanctum')->get('/auth/verify', [VerificationController::class, 'verify']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('/students', StudentController::class);
+    Route::post('/students/{student}/accept', [StudentController::class, 'accept'])->name('students.accept');
     // --- School Grade Level Assignment Routes ---
     Route::put('/schools/{school}/grade-levels', [SchoolController::class, 'updateAssignedGradeLevels']);
     Route::get('/schools/{school}/grade-levels', [SchoolController::class, 'getAssignedGradeLevels'])->name('schools.grades.index');
@@ -160,4 +162,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/permissions', [RoleController::class, 'getAllPermissions'])->name('permissions.index'); // <-- THIS IS THE ROUTE
     Route::apiResource('/roles', RoleController::class);
     // --- End Role & Permission Routes ---
+
+    Route::apiResource('student-notes', StudentNoteController::class)->only(['index', 'store', 'update', 'destroy']);
 });

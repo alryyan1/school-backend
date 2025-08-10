@@ -28,7 +28,14 @@ class StudentResource extends JsonResource
             'date_of_birth' => $this->date_of_birth, // Relies on $casts['date:Y-m-d'] in Model
             'gender' => $this->gender, // Assumes direct output is fine
             'goverment_id' => $this->goverment_id,
-            'wished_level' => $this->wished_level, // Assumes direct output is fine
+            'wished_school' => $this->wished_school,
+            'wished_school_details' => $this->whenLoaded('wishedSchool', function () {
+                return [
+                    'id' => $this->wishedSchool->id,
+                    'name' => $this->wishedSchool->name,
+                    'code' => $this->wishedSchool->code,
+                ];
+            }),
             'medical_condition' => $this->medical_condition,
             'referred_school' => $this->referred_school,
             'success_percentage' => $this->success_percentage,
@@ -76,6 +83,35 @@ class StudentResource extends JsonResource
             // Timestamps
             'created_at' => $this->created_at ? $this->created_at->toIso8601String() : null,
             'updated_at' => $this->updated_at ? $this->updated_at->toIso8601String() : null,
+
+            // Add enrollments with nested data
+            'enrollments' => $this->whenLoaded('enrollments', function () {
+                return $this->enrollments->map(function ($enrollment) {
+                    return [
+                        'id' => $enrollment->id,
+                        'status' => $enrollment->status,
+                        'fees' => $enrollment->fees,
+                        'school' => $enrollment->school ? [
+                            'id' => $enrollment->school->id,
+                            'name' => $enrollment->school->name,
+                        ] : null,
+                        'grade_level' => $enrollment->gradeLevel ? [
+                            'id' => $enrollment->gradeLevel->id,
+                            'name' => $enrollment->gradeLevel->name,
+                        ] : null,
+                        'academic_year' => $enrollment->academicYear ? [
+                            'id' => $enrollment->academicYear->id,
+                            'name' => $enrollment->academicYear->name,
+                        ] : null,
+                        'classroom' => $enrollment->classroom ? [
+                            'id' => $enrollment->classroom->id,
+                            'name' => $enrollment->classroom->name,
+                        ] : null,
+                        'created_at' => $enrollment->created_at,
+                        'updated_at' => $enrollment->updated_at,
+                    ];
+                });
+            }),
         ];
     }
 }
