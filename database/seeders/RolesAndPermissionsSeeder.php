@@ -60,6 +60,8 @@ class RolesAndPermissionsSeeder extends Seeder
         Permission::firstOrCreate(['name' => 'view student enrollments']);
         // New explicit enrollment permission (UI gating)
         Permission::firstOrCreate(['name' => 'enrollment permission']);
+        // New: Assign student to academic year
+        Permission::firstOrCreate(['name' => 'assign student to academic year']);
 
         // Exams & Results
         Permission::firstOrCreate(['name' => 'manage exams']); // Create exam periods
@@ -105,7 +107,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'manage academic years', // Can manage specific school's years
             'manage classrooms',     // Can manage specific school's classrooms
             'manage curriculum',
-            'manage student enrollments', 'view student enrollments', 'enrollment permission',
+            'manage student enrollments', 'view student enrollments', 'enrollment permission', 'assign student to academic year',
             'manage exams', 'manage exam schedules', 'enter exam results', 'view any exam results',
             'view student fee overview', 'manage fee installments', 'record fee payments',
             // Does NOT get 'access school treasury'
@@ -134,7 +136,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'manage academic years', // For their school
             'manage classrooms',     // For their school
             'manage curriculum',     // For their school
-            'manage student enrollments', 'view student enrollments', 'enrollment permission', // For their school
+            'manage student enrollments', 'view student enrollments', 'enrollment permission', 'assign student to academic year', // For their school
             'manage exams', 'manage exam schedules', 'enter exam results', 'view own school exam results', // For their school
             'view student fee overview', // For students in their school
             'view transport assignments', // For students in their school

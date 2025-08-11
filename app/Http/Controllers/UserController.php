@@ -34,7 +34,8 @@ class UserController extends Controller
         // Allow admins to create any user, public registration might have different validation/defaults
         if (auth()->check()) { // If called by an authenticated user (admin)
             $this->authorize('create', User::class);
-            $roleValidation = ['required', Rule::in(['admin', 'teacher', 'student', 'parent'])];
+            // Validate against Spatie roles table
+            $roleValidation = ['required', 'string', Rule::exists('roles', 'name')];
             $defaultRole = null; // Admin must specify role
         } else { // Public registration
             $roleValidation = ['sometimes', Rule::in(['student', 'parent'])]; // Limit roles for public registration
@@ -67,6 +68,11 @@ class UserController extends Controller
             'gender' => $validatedData['gender'] ?? null,
         ]);
 
+        // Assign Spatie role if provided
+        if (!empty($validatedData['role'])) {
+            $user->syncRoles([$validatedData['role']]);
+        }
+
         // For public registration, maybe log them in or send verification email?
         // For admin creation, just return the user
 
@@ -94,7 +100,8 @@ class UserController extends Controller
             'name' => 'sometimes|required|string|max:255',
             'username' => ['sometimes', 'required', 'string', 'max:100', Rule::unique('users')->ignore($user->id)],
             'email' => ['sometimes', 'required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
-            'role' => ['sometimes', 'required', Rule::in(['admin', 'teacher', 'student', 'parent'])],
+            // Validate against Spatie roles table by name
+            'role' => ['sometimes', 'required', 'string', Rule::exists('roles', 'name')],
             'phone' => 'nullable|string|max:20',
             'gender' => ['nullable', Rule::in(['male', 'female', 'ذكر', 'انثي'])],
             // DO NOT validate password here
@@ -104,7 +111,11 @@ class UserController extends Controller
             return response()->json(['message' => 'خطأ في التحقق', 'errors' => $validator->errors()], 422);
         }
 
-        $user->update($validator->validated());
+        $data = $validator->validated();
+        $user->update($data);
+        if (array_key_exists('role', $data) && !empty($data['role'])) {
+            $user->syncRoles([$data['role']]);
+        }
 
         return new UserResource($user->fresh());
     }
