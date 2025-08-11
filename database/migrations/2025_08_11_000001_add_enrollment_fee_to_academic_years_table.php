@@ -11,12 +11,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        if (!Schema::hasTable('student_notes')) {
-            Schema::create('student_notes', function (Blueprint $table) {
-                $table->id();
-                $table->timestamps();
-            });
-        }
+        Schema::table('academic_years', function (Blueprint $table) {
+            $table->decimal('enrollment_fee', 10, 2)->default(0)->after('is_current');
+        });
     }
 
     /**
@@ -24,6 +21,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('student_notes');
+        Schema::table('academic_years', function (Blueprint $table) {
+            $table->dropColumn('enrollment_fee');
+        });
     }
 };
+
+

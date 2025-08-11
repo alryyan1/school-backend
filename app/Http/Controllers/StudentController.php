@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator; // Import the Validator class
 use TCPDF;
 use TCPDF_FONTS;
+use App\Helpers\TermsConditionsPdf;
 
 class StudentPdf extends TCPDF // Optional: Extend TCPDF for custom Headers/Footers
 {
@@ -40,7 +41,14 @@ class StudentController extends Controller
 {
     public function index()
     {
-        $students = Student::with('wishedSchool','enrollments.school','enrollments.gradeLevel','enrollments.academicYear','enrollments.classroom')->get();
+        $students = Student::with(
+            'wishedSchool',
+            'enrollments.school',
+            'enrollments.gradeLevel',
+            'enrollments.academicYear',
+            'enrollments.classroom',
+            'enrollments.feeInstallments'
+        )->get();
         return  StudentResource::collection($students);
     }
     public function updatePhoto(Request $request, Student $student)
@@ -142,6 +150,7 @@ class StudentController extends Controller
             'enrollments.gradeLevel',
             'enrollments.academicYear',
             'enrollments.classroom',
+            'enrollments.feeInstallments',
         ]);
         return new StudentResource($student);
     }
@@ -551,6 +560,24 @@ class StudentController extends Controller
             $fileName = 'student_list_filtered_' . date('Y-m-d_H-i-s') . '.pdf';
         }
         $pdf->Output($fileName, 'I');
+        exit;
+    }
+
+    /**
+     * Generate Terms & Conditions PDF.
+     * GET /reports/terms-and-conditions
+     */
+    public function generateTermsAndConditionsPdf()
+    {
+        $pdf = new TermsConditionsPdf(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
+        $pdf->SetCreator(PDF_CREATOR);
+        $pdf->SetAuthor(config('app.name'));
+        $pdf->SetTitle('الشروط والأحكام');
+        $pdf->SetSubject('الشروط والأحكام للتسجيل');
+        $pdf->SetMargins(15, 20, 15);
+        $pdf->AddPage();
+        $pdf->addTermsBody();
+        $pdf->Output('terms_and_conditions.pdf', 'I');
         exit;
     }
 }

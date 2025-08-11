@@ -31,3 +31,7 @@ Route::get('/enrollments/{studentAcademicYear}/fee-statement-pdf', [FeeInstallme
     // --- Route for Student List PDF ---
     Route::get('/reports/students/list-pdf', [StudentController::class, 'generateListPdf'])
          ->name('reports.students.list.pdf');
+
+    // --- Route for Terms & Conditions PDF ---
+    Route::get('/reports/terms-and-conditions', [StudentController::class, 'generateTermsAndConditionsPdf'])
+         ->name('reports.terms.pdf');

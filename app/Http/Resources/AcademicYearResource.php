@@ -21,6 +21,7 @@ class AcademicYearResource extends JsonResource
             'end_date' => $this->end_date,   // Formatted by cast
             'is_current' => $this->is_current,
             'school_id' => $this->school_id,
+            'enrollment_fee' => (float) ($this->enrollment_fee ?? 0),
             // Eager load school relationship in controller for better performance
             'school' => new SchoolResource($this->whenLoaded('school')),
             'created_at' => $this->created_at->toIso8601String(),

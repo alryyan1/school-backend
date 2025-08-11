@@ -47,6 +47,10 @@ class StudentFeePaymentController extends Controller
     }
     public function store(Request $request)
     {
+        // Permission check: only users with 'record fee payments' may create payments
+        if (!auth()->user() || !auth()->user()->can('record fee payments')) {
+            return response()->json(['message' => 'غير مخول لإضافة دفعات'], 403);
+        }
         $validator = Validator::make($request->all(), [
             'fee_installment_id' => 'required|integer|exists:fee_installments,id', // <-- Link to installment
             'payment_date' => 'required|date_format:Y-m-d',
@@ -87,6 +91,10 @@ class StudentFeePaymentController extends Controller
     }
     public function update(Request $request, StudentFeePayment $studentFeePayment)
     {
+        // Permission check: only users with 'record fee payments' may update payments
+        if (!auth()->user() || !auth()->user()->can('record fee payments')) {
+            return response()->json(['message' => 'غير مخول لتعديل الدفعات'], 403);
+        }
         $installmentId = $studentFeePayment->fee_installment_id; // Get installment ID before update
         $validator = Validator::make($request->all(), [
             'amount' => ['sometimes', 'required', 'numeric', 'min:0.01'], // Keep existing rules
@@ -107,6 +115,10 @@ class StudentFeePaymentController extends Controller
     }
     public function destroy(StudentFeePayment $studentFeePayment)
     {
+        // Permission check: only users with 'record fee payments' may delete payments
+        if (!auth()->user() || !auth()->user()->can('record fee payments')) {
+            return response()->json(['message' => 'غير مخول لحذف الدفعات'], 403);
+        }
         $installmentId = $studentFeePayment->fee_installment_id; // Get ID before deleting
         DB::transaction(function () use ($studentFeePayment, $installmentId) {
             $studentFeePayment->delete();

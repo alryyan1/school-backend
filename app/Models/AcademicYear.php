@@ -45,12 +45,14 @@ class AcademicYear extends Model
         'end_date',
         'is_current',
         'school_id',
+        'enrollment_fee',
     ];
 
     protected $casts = [
         'start_date' => 'date:Y-m-d',
         'end_date' => 'date:Y-m-d',
         'is_current' => 'boolean',
+        'enrollment_fee' => 'decimal:2',
     ];
 
     /**

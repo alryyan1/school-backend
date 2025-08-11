@@ -75,6 +75,7 @@ class AcademicYearController extends Controller
             'end_date' => 'required|date_format:Y-m-d|after:start_date',
             'is_current' => 'required|boolean',
             'school_id' => ['required', 'integer', Rule::exists('schools', 'id')], // Ensure school exists
+            'enrollment_fee' => 'nullable|numeric|min:0',
         ]);
 
         if ($validator->fails()) {
@@ -132,6 +133,7 @@ class AcademicYearController extends Controller
                            }
                           ],
             'is_current' => 'sometimes|required|boolean',
+            'enrollment_fee' => 'sometimes|nullable|numeric|min:0',
             // Generally, changing the school_id might be restricted
             // 'school_id' => ['sometimes', 'required', 'integer', Rule::exists('schools', 'id')],
         ]);
