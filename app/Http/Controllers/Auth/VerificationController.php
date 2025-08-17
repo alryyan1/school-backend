@@ -33,7 +33,7 @@ class VerificationController extends Controller
                 'name' => $user->name,
                 'email' => $user->email,
                 'role' => $user->role, // Assuming you have a 'role' column
-                // Add any other user details you need
+                'permissions' => method_exists($user, 'getAllPermissions') ? $user->getAllPermissions()->pluck('name') : [],
             ],
             'valid' => true
         ]);

@@ -35,16 +35,16 @@ class StudentFeePayment extends Model
 {
     use HasFactory;
    // Fillable needs fee_installment_id now
-   protected $fillable = [ 'fee_installment_id', 'amount', 'payment_date', 'notes',
-   
-   'payment_method', // <-- Add payment_method
-
-]; // <-- Updated
+   protected $fillable = [ 'fee_installment_id', 'amount', 'payment_date', 'notes', 'payment_method_id' ];
    protected $casts = [ 'amount' => 'decimal:2', 'payment_date' => 'date:Y-m-d' ];
 
    // --- Updated Relationship ---
    public function feeInstallment(): BelongsTo {
        return $this->belongsTo(FeeInstallment::class);
+   }
+   public function paymentMethod(): BelongsTo
+   {
+       return $this->belongsTo(PaymentMethod::class);
    }
    // -------------------------
 

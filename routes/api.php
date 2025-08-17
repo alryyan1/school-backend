@@ -18,6 +18,8 @@ use App\Http\Controllers\SchoolController;
 use App\Http\Controllers\StudentAcademicYearController;
 use App\Http\Controllers\StudentFeePaymentController;
 use App\Http\Controllers\StudentTransportAssignmentController;
+use App\Http\Controllers\StudentWarningController;
+use App\Http\Controllers\StudentAbsenceController;
 use App\Http\Controllers\SubjectController;
 use App\Http\Controllers\TeacherController;
 use App\Http\Controllers\TransportRouteController;
@@ -51,7 +53,10 @@ Route::post('/register', [UserController::class, 'store']);
 
 
 Route::middleware('auth:sanctum')->post('/logout', function (Request $request) {
-    $request->user()->currentAccessToken()->delete();
+    $token = $request->user()?->currentAccessToken();
+    if ($token instanceof \Laravel\Sanctum\PersonalAccessToken) {
+        $token->delete();
+    }
     return response()->json(['message' => 'Logged out successfully']);
 });
 
@@ -137,6 +142,7 @@ Route::middleware('auth:sanctum')->group(function () {
      Route::put('/student-enrollments/{studentAcademicYear}/assign-classroom', [StudentAcademicYearController::class, 'assignToClassroom'])->name('enrollments.assignClassroom');
      Route::apiResource('/student-enrollments', StudentAcademicYearController::class)->except(['show']); // show might not be needed for the manager
      Route::apiResource('/student-fee-payments', StudentFeePaymentController::class);
+     Route::apiResource('/payment-methods', \App\Http\Controllers\PaymentMethodController::class)->only(['index','store']);
      Route::apiResource('/exams', ExamController::class);
  
      // --- ROLE ROUTE ---
@@ -164,4 +170,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // --- End Role & Permission Routes ---
 
     Route::apiResource('student-notes', StudentNoteController::class)->only(['index', 'store', 'update', 'destroy']);
+    // --- Student Warnings ---
+    Route::apiResource('student-warnings', StudentWarningController::class)->only(['index','store','update','destroy']);
+    Route::get('student-warnings/{studentWarning}/pdf', [StudentWarningController::class, 'generatePdf'])->name('student-warnings.pdf');
+    // --- Student Absences ---
+    Route::apiResource('student-absences', StudentAbsenceController::class)->only(['index','store','update','destroy']);
 });

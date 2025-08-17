@@ -14,7 +14,8 @@ class StudentFeePaymentResource extends JsonResource
             'amount' => $this->amount,
             'payment_date' => $this->payment_date,
             'notes' => $this->notes,
-            'payment_method' => $this->payment_method, // <-- New field
+            'payment_method_id' => $this->payment_method_id,
+            'payment_method_name' => optional($this->whenLoaded('paymentMethod'))?->name,
             // Optional: Load installment details
             // 'fee_installment' => new FeeInstallmentResource($this->whenLoaded('feeInstallment')),
             'created_at' => $this->created_at->toIso8601String(),

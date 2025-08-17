@@ -111,6 +111,11 @@ class StudentAcademicYearController extends Controller
      */
     public function store(Request $request)
     {
+        // If a discount is being applied, ensure the user has the proper permission
+        if ($request->filled('discount') && intval($request->input('discount')) > 0) {
+            abort_unless(auth()->user() && auth()->user()->can('apply fee discount'), 403, 'ليس لديك صلاحية لتطبيق الخصم');
+        }
+
         $validator = Validator::make($request->all(), [
             'student_id' => 'required|integer|exists:students,id',
             'school_id' => 'required|integer|exists:schools,id', // <-- Validate school_id
@@ -126,7 +131,7 @@ class StudentAcademicYearController extends Controller
             ],
             'grade_level_id' => 'required|integer|exists:grade_levels,id',
             'fees'=>'nullable',
-            'discount'=>'nullable|integer|in:0,10,20,30,40',
+            'discount'=>'nullable|integer|in:0,5,10,15,20,25,30,40,50',
             'classroom_id' => [
                 'nullable',
                 'integer',
@@ -137,6 +142,8 @@ class StudentAcademicYearController extends Controller
                 })
             ],
             'status' => ['required', Rule::in(['active', 'transferred', 'graduated', 'withdrawn'])],
+            // new field (optional, defaults to regular)
+            'enrollment_type' => ['sometimes', Rule::in(['regular','scholarship'])],
         ]);
 
 
@@ -155,6 +162,18 @@ class StudentAcademicYearController extends Controller
      */
     public function update(Request $request, StudentAcademicYear $student_enrollment) // Route model binding
     {
+        // Discount permission check when attempting to change discount
+        if ($request->has('discount')) {
+            $discount = $request->input('discount');
+            if (!is_null($discount) && intval($discount) > 0) {
+                abort_unless(auth()->user() && auth()->user()->can('apply fee discount'), 403, 'ليس لديك صلاحية لتطبيق الخصم');
+            }
+        }
+        // Authorization: change of enrollment_type requires explicit permission
+        if ($request->has('enrollment_type')) {
+            abort_unless(auth()->user() && auth()->user()->can('set student enrollment type'), 403, 'ليس لديك صلاحية لتحديد نوع تسجيل الطالب');
+        }
+
         $validator = Validator::make($request->all(), [
             'classroom_id' => [
                 'nullable',
@@ -165,7 +184,9 @@ class StudentAcademicYearController extends Controller
                         ->where('grade_level_id', $student_enrollment->grade_level_id);
                 }),
             ],
+            'discount' => ['sometimes','nullable','integer','in:0,5,10,15,20,25,30,40,50'],
             'status' => ['sometimes', 'required', Rule::in(['active', 'transferred', 'graduated', 'withdrawn'])],
+            'enrollment_type' => ['sometimes','required', Rule::in(['regular','scholarship'])],
             // Do not allow changing student, year, grade, school via update
         ]);
 
@@ -320,8 +341,8 @@ class StudentAcademicYearController extends Controller
      */
     public function assignToClassroom(Request $request, StudentAcademicYear $studentAcademicYear)
     {
-        // Authorization check: Can current user manage this enrollment/classroom assignment?
-        // $this->authorize('update', $studentAcademicYear);
+        // Authorization: require explicit permission to assign classroom
+        abort_unless(auth()->user() && auth()->user()->can('assign student to classroom'), 403, 'ليس لديك صلاحية لتعيين الطلاب للفصول');
 
         $validator = Validator::make($request->all(), [
             'classroom_id' => [

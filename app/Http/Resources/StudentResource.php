@@ -24,6 +24,8 @@ class StudentResource extends JsonResource
             // Core Student Info
             'id' => $this->id,
             'student_name' => $this->student_name,
+            // Mobile app expects 'name' key
+            'name' => $this->student_name,
             'email' => $this->email,
             'date_of_birth' => $this->date_of_birth, // Relies on $casts['date:Y-m-d'] in Model
             'gender' => $this->gender, // Assumes direct output is fine
@@ -90,6 +92,7 @@ class StudentResource extends JsonResource
                     return [
                         'id' => $enrollment->id,
                         'status' => $enrollment->status,
+                        'enrollment_type' => $enrollment->enrollment_type,
                         'fees' => $enrollment->fees,
                         'discount' => $enrollment->discount,
                         'school' => $enrollment->school ? [
@@ -133,6 +136,7 @@ class StudentResource extends JsonResource
 
                 return [
                     'student_academic_year_id' => $latest->id,
+                    'enrollment_type' => $latest->enrollment_type,
                     'academic_year' => [
                         'id' => $latest->academicYear?->id,
                         'name' => $latest->academicYear?->name,

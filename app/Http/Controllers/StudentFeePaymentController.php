@@ -55,13 +55,7 @@ class StudentFeePaymentController extends Controller
             'fee_installment_id' => 'required|integer|exists:fee_installments,id', // <-- Link to installment
             'payment_date' => 'required|date_format:Y-m-d',
             'notes' => 'nullable|string|max:1000',
-            'payment_method' => [
-                'required',
-
-                Rule::in(['cash','bank'])
-
-                // <-- Validate payment method
-            ],
+            'payment_method_id' => ['required','integer','exists:payment_methods,id'],
             // Add validation: ensure payment amount <= remaining amount on installment?
             'amount' => [
                 'required',
@@ -99,7 +93,7 @@ class StudentFeePaymentController extends Controller
         $validator = Validator::make($request->all(), [
             'amount' => ['sometimes', 'required', 'numeric', 'min:0.01'], // Keep existing rules
             'payment_date' => 'sometimes|required|date_format:Y-m-d',
-            'payment_method' => ['sometimes', 'required', Rule::in(['cash', 'bank'])], // <-- Add validation
+            'payment_method_id' => ['sometimes','required','integer','exists:payment_methods,id'],
             'notes' => 'nullable|string|max:1000',
             // Add overpayment check for amount here if needed
         ]);

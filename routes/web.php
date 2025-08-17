@@ -3,6 +3,7 @@
 use App\Http\Controllers\FeeInstallmentController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\StudentFeePaymentController;
+use App\Http\Controllers\StudentWarningController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -35,3 +36,7 @@ Route::get('/enrollments/{studentAcademicYear}/fee-statement-pdf', [FeeInstallme
     // --- Route for Terms & Conditions PDF ---
     Route::get('/reports/terms-and-conditions', [StudentController::class, 'generateTermsAndConditionsPdf'])
          ->name('reports.terms.pdf');
+
+    // --- Student Warning Notice PDF (web route for direct access) ---
+    Route::get('/student-warnings/{studentWarning}/pdf', [StudentWarningController::class, 'generatePdf'])
+         ->name('student-warnings.pdf');

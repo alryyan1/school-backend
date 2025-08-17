@@ -30,6 +30,7 @@ class StudentAcademicYearFactory extends Factory
             'grade_level_id' => $gradeLevel->id,
             'classroom_id' => $this->faker->optional(0.8)->randomElement([$classroom?->id]), // 80% chance of having classroom if found
             'status' => $this->faker->randomElement(['active', 'transferred', 'graduated', 'withdrawn']),
+            'enrollment_type' => $this->faker->randomElement(['regular','scholarship']),
         ];
     }
 }

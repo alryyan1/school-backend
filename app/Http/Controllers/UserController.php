@@ -48,6 +48,8 @@ class UserController extends Controller
             'email' => 'required|string|email|max:255|unique:users,email',
             'password' => ['required', 'confirmed', Password::defaults()], // Requires password_confirmation field
             'role' => $roleValidation,
+            'spatie_roles' => ['sometimes','array'],
+            'spatie_roles.*' => ['string', Rule::exists('roles','name')],
             'phone' => 'nullable|string|max:20',
             'gender' => ['nullable', Rule::in(['male', 'female', 'ذكر', 'انثي'])], // Allow multiple gender values from different sources
         ]);
@@ -68,8 +70,10 @@ class UserController extends Controller
             'gender' => $validatedData['gender'] ?? null,
         ]);
 
-        // Assign Spatie role if provided
-        if (!empty($validatedData['role'])) {
+        // Assign Spatie roles if provided, else fallback to single role
+        if ($request->filled('spatie_roles')) {
+            $user->syncRoles($request->input('spatie_roles', []));
+        } elseif (!empty($validatedData['role'])) {
             $user->syncRoles([$validatedData['role']]);
         }
 
@@ -102,6 +106,8 @@ class UserController extends Controller
             'email' => ['sometimes', 'required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
             // Validate against Spatie roles table by name
             'role' => ['sometimes', 'required', 'string', Rule::exists('roles', 'name')],
+            'spatie_roles' => ['sometimes','array'],
+            'spatie_roles.*' => ['string', Rule::exists('roles','name')],
             'phone' => 'nullable|string|max:20',
             'gender' => ['nullable', Rule::in(['male', 'female', 'ذكر', 'انثي'])],
             // DO NOT validate password here
@@ -113,7 +119,9 @@ class UserController extends Controller
 
         $data = $validator->validated();
         $user->update($data);
-        if (array_key_exists('role', $data) && !empty($data['role'])) {
+        if ($request->has('spatie_roles')) {
+            $user->syncRoles($request->input('spatie_roles', []));
+        } elseif (array_key_exists('role', $data) && !empty($data['role'])) {
             $user->syncRoles([$data['role']]);
         }
 

@@ -62,6 +62,10 @@ class RolesAndPermissionsSeeder extends Seeder
         Permission::firstOrCreate(['name' => 'enrollment permission']);
         // New: Assign student to academic year
         Permission::firstOrCreate(['name' => 'assign student to academic year']);
+        // Explicit permission for assigning to classroom (used in controller)
+        Permission::firstOrCreate(['name' => 'assign student to classroom']);
+        // New: Set enrollment type (scholarship/regular)
+        Permission::firstOrCreate(['name' => 'set student enrollment type']);
 
         // Exams & Results
         Permission::firstOrCreate(['name' => 'manage exams']); // Create exam periods
@@ -74,6 +78,8 @@ class RolesAndPermissionsSeeder extends Seeder
         Permission::firstOrCreate(['name' => 'view student fee overview']); // General view of fees
         Permission::firstOrCreate(['name' => 'manage fee installments']); // Create/edit installments
         Permission::firstOrCreate(['name' => 'record fee payments']);     // Add/edit/delete payments
+        // New: Apply discounts on student fees
+        Permission::firstOrCreate(['name' => 'apply fee discount']);
         Permission::firstOrCreate(['name' => 'view financial reports']); // Broader financial view
         Permission::firstOrCreate(['name' => 'access school treasury']);  // **Highly restricted**
 
@@ -86,13 +92,16 @@ class RolesAndPermissionsSeeder extends Seeder
         Permission::firstOrCreate(['name' => 'view student medical records']);
         Permission::firstOrCreate(['name' => 'edit student medical records']);
 
+        // Disciplinary Warnings
+        Permission::firstOrCreate(['name' => 'manage student warnings']);
+
 
         // === Define Roles and Assign Permissions ===
 
         // 1. Super Manager Role
         $superManagerRole = Role::firstOrCreate(['name' => 'super-manager']);
-        // Super managers get all permissions via Gate::before typically, or:
-        // $superManagerRole->syncPermissions(Permission::all());
+        // Ensure the super-manager role always has ALL permissions
+        $superManagerRole->syncPermissions(Permission::all());
 
         // 2. General Manager Role
         $generalManagerRole = Role::firstOrCreate(['name' => 'general-manager']);
@@ -107,13 +116,15 @@ class RolesAndPermissionsSeeder extends Seeder
             'manage academic years', // Can manage specific school's years
             'manage classrooms',     // Can manage specific school's classrooms
             'manage curriculum',
-            'manage student enrollments', 'view student enrollments', 'enrollment permission', 'assign student to academic year',
+            'manage student enrollments', 'view student enrollments', 'enrollment permission', 'assign student to academic year', 'set student enrollment type',
+            // New classroom assignment explicit permission
+            'assign student to classroom',
             'manage exams', 'manage exam schedules', 'enter exam results', 'view any exam results',
-            'view student fee overview', 'manage fee installments', 'record fee payments',
+            'view student fee overview', 'manage fee installments', 'record fee payments', 'apply fee discount',
             // Does NOT get 'access school treasury'
             'view financial reports', // Can see reports but not raw treasury
             'manage transport routes', 'assign students to transport', 'view transport assignments',
-            'view student medical records', 'edit student medical records',
+            'view student medical records', 'edit student medical records', 'manage student warnings',
         ]);
 
         // 3. Accountant Role
@@ -122,7 +133,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'view any student', // To see their fee status
             'view student fee overview',
             'manage fee installments',
-            'record fee payments',
+            'record fee payments', 'apply fee discount',
             'view financial reports', // Specific to fees
         ]);
 
@@ -136,11 +147,12 @@ class RolesAndPermissionsSeeder extends Seeder
             'manage academic years', // For their school
             'manage classrooms',     // For their school
             'manage curriculum',     // For their school
-            'manage student enrollments', 'view student enrollments', 'enrollment permission', 'assign student to academic year', // For their school
+            'manage student enrollments', 'view student enrollments', 'enrollment permission', 'assign student to academic year', 'assign student to classroom', 'set student enrollment type', // For their school
             'manage exams', 'manage exam schedules', 'enter exam results', 'view own school exam results', // For their school
             'view student fee overview', // For students in their school
             'view transport assignments', // For students in their school
             'view student medical records', // For students in their school
+            'manage student warnings',
         ]);
 
         // 5. Nurse Role
@@ -168,6 +180,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'name' => 'Super admin ', 'username' => 'superadmin', 'password' => Hash::make('12345678'), 'role' => 'admin' // Main role column
         ]);
         $sm1->assignRole('super-manager'); // Spatie role
+        // Ensure the superadmin user always has ALL permissions directly
+        $sm1->syncPermissions(Permission::all());
 
         $sm2 = User::firstOrCreate(['email' => 'supermanager2@example.com'], [
             'name' => 'Super Manager Two', 'username' => 'supermanager2', 'password' => Hash::make('password'), 'role' => 'admin'

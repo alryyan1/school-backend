@@ -56,6 +56,7 @@ class StudentAcademicYear extends Model
         'grade_level_id',
         'classroom_id', // Nullable
         'status',
+         'enrollment_type',
         'fees',
         'discount',
         'school_id', // <-- Add school_id

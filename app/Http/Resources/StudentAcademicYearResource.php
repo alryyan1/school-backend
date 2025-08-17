@@ -24,6 +24,7 @@ class StudentAcademicYearResource extends JsonResource
             'school_id' => $this->school_id, // <-- Add school_id
             'school'=> new SchoolResource($this->whenLoaded('school')),
             'status' => $this->status,
+            'enrollment_type' => $this->enrollment_type,
             // Load relationships in controller
             'student' => new StudentResource($this->whenLoaded('student')),
             'academic_year' => new AcademicYearResource($this->whenLoaded('academicYear')),
