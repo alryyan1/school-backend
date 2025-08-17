@@ -111,7 +111,7 @@ return [
         'name' => 'الاسم',
         'email' => 'البريد الإلكتروني',
         'password' => 'كلمة المرور',
-        'role' => 'الدور',
+        // 'role' removed in favor of Spatie roles
         'phone' => 'رقم الهاتف',
         'gender' => 'الجنس',
         'address' => 'العنوان',

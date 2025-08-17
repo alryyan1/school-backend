@@ -34,12 +34,6 @@ class UserController extends Controller
         // Allow admins to create any user, public registration might have different validation/defaults
         if (auth()->check()) { // If called by an authenticated user (admin)
             $this->authorize('create', User::class);
-            // Validate against Spatie roles table
-            $roleValidation = ['required', 'string', Rule::exists('roles', 'name')];
-            $defaultRole = null; // Admin must specify role
-        } else { // Public registration
-            $roleValidation = ['sometimes', Rule::in(['student', 'parent'])]; // Limit roles for public registration
-            $defaultRole = 'student'; // Default role for public registration
         }
 
         $validator = Validator::make($request->all(), [
@@ -47,7 +41,6 @@ class UserController extends Controller
             'username' => 'required|string|max:100|unique:users,username',
             'email' => 'required|string|email|max:255|unique:users,email',
             'password' => ['required', 'confirmed', Password::defaults()], // Requires password_confirmation field
-            'role' => $roleValidation,
             'spatie_roles' => ['sometimes','array'],
             'spatie_roles.*' => ['string', Rule::exists('roles','name')],
             'phone' => 'nullable|string|max:20',
@@ -65,7 +58,6 @@ class UserController extends Controller
             'username' => $validatedData['username'],
             'email' => $validatedData['email'],
             'password' => Hash::make($validatedData['password']),
-            'role' => $validatedData['role'] ?? $defaultRole, // Assign role or default
             'phone' => $validatedData['phone'] ?? null,
             'gender' => $validatedData['gender'] ?? null,
         ]);
@@ -73,8 +65,6 @@ class UserController extends Controller
         // Assign Spatie roles if provided, else fallback to single role
         if ($request->filled('spatie_roles')) {
             $user->syncRoles($request->input('spatie_roles', []));
-        } elseif (!empty($validatedData['role'])) {
-            $user->syncRoles([$validatedData['role']]);
         }
 
         // For public registration, maybe log them in or send verification email?
@@ -104,8 +94,7 @@ class UserController extends Controller
             'name' => 'sometimes|required|string|max:255',
             'username' => ['sometimes', 'required', 'string', 'max:100', Rule::unique('users')->ignore($user->id)],
             'email' => ['sometimes', 'required', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
-            // Validate against Spatie roles table by name
-            'role' => ['sometimes', 'required', 'string', Rule::exists('roles', 'name')],
+            // Spatie roles only
             'spatie_roles' => ['sometimes','array'],
             'spatie_roles.*' => ['string', Rule::exists('roles','name')],
             'phone' => 'nullable|string|max:20',
@@ -121,8 +110,6 @@ class UserController extends Controller
         $user->update($data);
         if ($request->has('spatie_roles')) {
             $user->syncRoles($request->input('spatie_roles', []));
-        } elseif (array_key_exists('role', $data) && !empty($data['role'])) {
-            $user->syncRoles([$data['role']]);
         }
 
         return new UserResource($user->fresh());
@@ -161,7 +148,8 @@ class UserController extends Controller
         $this->authorize('delete', $user);
 
         // Prevent deleting the last admin? Or oneself? Add checks if needed.
-        // if ($user->role === 'admin' && User::where('role', 'admin')->count() <= 1) {
+        // Example with Spatie roles (disabled for now):
+        // if ($user->hasRole('admin') && User::role('admin')->count() <= 1) {
         //     return response()->json(['message' => 'لا يمكن حذف آخر مسؤول.'], 403);
         // }
         // if ($user->id === auth()->id()) {

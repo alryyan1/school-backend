@@ -177,48 +177,49 @@ class RolesAndPermissionsSeeder extends Seeder
         // Ensure these users are created with your desired initial passwords
         // Super Managers
         $sm1 = User::firstOrCreate(['email' => 'superadmin@gmail.com'], [
-            'name' => 'Super admin ', 'username' => 'superadmin', 'password' => Hash::make('12345678'), 'role' => 'admin' // Main role column
+            'name' => 'Super admin ', 'username' => 'superadmin', 'password' => Hash::make('12345678')
         ]);
-        $sm1->assignRole('super-manager'); // Spatie role
-        // Ensure the superadmin user always has ALL permissions directly
+        // Assign both 'super-manager' and 'admin' Spatie roles to super admin
+        $sm1->syncRoles(['super-manager', 'admin']);
+        // Ensure the superadmin user always has ALL permissions directly as well
         $sm1->syncPermissions(Permission::all());
 
         $sm2 = User::firstOrCreate(['email' => 'supermanager2@example.com'], [
-            'name' => 'Super Manager Two', 'username' => 'supermanager2', 'password' => Hash::make('password'), 'role' => 'admin'
+            'name' => 'Super Manager Two', 'username' => 'supermanager2', 'password' => Hash::make('password')
         ]);
-        $sm2->assignRole('super-manager');
+        $sm2->syncRoles(['super-manager']);
 
         // General Manager
         $gm = User::firstOrCreate(['email' => 'gm@example.com'], [
-            'name' => 'المدير العام', 'username' => 'generalmanager', 'password' => Hash::make('password'), 'role' => 'admin'
+            'name' => 'المدير العام', 'username' => 'generalmanager', 'password' => Hash::make('password')
         ]);
-        $gm->assignRole('general-manager');
+        $gm->syncRoles(['general-manager']);
 
         // Accountant
         $acc = User::firstOrCreate(['email' => 'accountant@example.com'], [
-            'name' => 'المحاسب', 'username' => 'accountant', 'password' => Hash::make('password'), 'role' => 'teacher' // Or a custom 'staff' role
+            'name' => 'المحاسب', 'username' => 'accountant', 'password' => Hash::make('password')
         ]);
-        $acc->assignRole('accountant');
+        $acc->syncRoles(['accountant']);
 
         // Transport Manager
         $tm = User::firstOrCreate(['email' => 'transport@example.com'], [
-            'name' => 'مدير الترحيل', 'username' => 'transportmanager', 'password' => Hash::make('password'), 'role' => 'teacher' // Or 'staff'
+            'name' => 'مدير الترحيل', 'username' => 'transportmanager', 'password' => Hash::make('password')
         ]);
-        $tm->assignRole('transport-manager');
+        $tm->syncRoles(['transport-manager']);
 
         // Nurse
         $nurseUser = User::firstOrCreate(['email' => 'nurse@example.com'], [
-            'name' => 'الممرضة', 'username' => 'nurse', 'password' => Hash::make('password'), 'role' => 'teacher' // Or 'staff'
+            'name' => 'الممرضة', 'username' => 'nurse', 'password' => Hash::make('password')
         ]);
-        $nurseUser->assignRole('nurse');
+        $nurseUser->syncRoles(['nurse']);
 
         // Principals - You'll need to associate them with specific schools manually or via another seeder
         // For now, we just create the user and assign the generic 'school-principal' Spatie role.
         // You would add a 'school_id' to the users table if a principal manages only one school.
         $principalBoysSec = User::firstOrCreate(['email' => 'principal.boys.sec@example.com'], [
-            'name' => 'مدير الثانوية بنين', 'username' => 'principalboyssec', 'password' => Hash::make('password'), 'role' => 'teacher'
+            'name' => 'مدير الثانوية بنين', 'username' => 'principalboyssec', 'password' => Hash::make('password')
         ]);
-        $principalBoysSec->assignRole('school-principal');
+        $principalBoysSec->syncRoles(['school-principal']);
         // Add $principalBoysSec->school_id = X; $principalBoysSec->save(); if you have school_id on users.
 
         // ... create other principal users similarly ...

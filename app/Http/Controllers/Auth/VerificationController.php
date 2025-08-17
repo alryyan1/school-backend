@@ -26,13 +26,15 @@ class VerificationController extends Controller
             ], 401);
         }
 
+        $spatieRoles = method_exists($user, 'getRoleNames') ? $user->getRoleNames() : collect();
+        $isAdmin = $spatieRoles && $spatieRoles->contains('admin');
         return response()->json([
             'success' => true,
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
-                'role' => $user->role, // Assuming you have a 'role' column
+                'role' => $isAdmin ? 'admin' : null,
                 'permissions' => method_exists($user, 'getAllPermissions') ? $user->getAllPermissions()->pluck('name') : [],
             ],
             'valid' => true
