@@ -31,7 +31,8 @@ class SchoolsTableSeeder extends Seeder
                 'establishment_date' => NULL,
                 'logo' => NULL,
                 'created_at' => '2025-07-11 17:09:57',
-                'updated_at' => '2025-07-11 17:09:57',
+                'updated_at' => '2025-08-11 22:48:25',
+                'user_id' => 2,
             ),
             1 => 
             array (
@@ -45,7 +46,8 @@ class SchoolsTableSeeder extends Seeder
                 'establishment_date' => NULL,
                 'logo' => NULL,
                 'created_at' => '2025-07-11 17:10:50',
-                'updated_at' => '2025-07-11 17:10:50',
+                'updated_at' => '2025-07-20 14:18:14',
+                'user_id' => 4,
             ),
             2 => 
             array (
@@ -59,7 +61,8 @@ class SchoolsTableSeeder extends Seeder
                 'establishment_date' => NULL,
                 'logo' => NULL,
                 'created_at' => '2025-07-11 17:11:35',
-                'updated_at' => '2025-07-11 17:11:35',
+                'updated_at' => '2025-07-19 17:33:01',
+                'user_id' => 7,
             ),
             3 => 
             array (
@@ -74,6 +77,7 @@ class SchoolsTableSeeder extends Seeder
                 'logo' => NULL,
                 'created_at' => '2025-07-11 17:12:37',
                 'updated_at' => '2025-07-11 17:12:37',
+                'user_id' => NULL,
             ),
             4 => 
             array (
@@ -88,6 +92,7 @@ class SchoolsTableSeeder extends Seeder
                 'logo' => NULL,
                 'created_at' => '2025-07-11 17:13:39',
                 'updated_at' => '2025-07-11 17:13:39',
+                'user_id' => NULL,
             ),
             5 => 
             array (
@@ -101,7 +106,8 @@ class SchoolsTableSeeder extends Seeder
                 'establishment_date' => NULL,
                 'logo' => NULL,
                 'created_at' => '2025-07-11 17:14:11',
-                'updated_at' => '2025-07-11 17:14:11',
+                'updated_at' => '2025-07-22 18:56:46',
+                'user_id' => 5,
             ),
             6 => 
             array (
@@ -115,7 +121,8 @@ class SchoolsTableSeeder extends Seeder
                 'establishment_date' => NULL,
                 'logo' => NULL,
                 'created_at' => '2025-07-11 17:14:38',
-                'updated_at' => '2025-07-11 17:14:38',
+                'updated_at' => '2025-07-22 18:56:34',
+                'user_id' => 7,
             ),
         ));
         
