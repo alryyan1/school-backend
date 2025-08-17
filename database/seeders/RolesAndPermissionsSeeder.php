@@ -98,6 +98,10 @@ class RolesAndPermissionsSeeder extends Seeder
 
         // === Define Roles and Assign Permissions ===
 
+        // Admin role used for full access checks in policies
+        $adminRole = Role::firstOrCreate(['name' => 'admin']);
+        $adminRole->syncPermissions(Permission::all());
+
         // 1. Super Manager Role
         $superManagerRole = Role::firstOrCreate(['name' => 'super-manager']);
         // Ensure the super-manager role always has ALL permissions
