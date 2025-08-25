@@ -37,40 +37,10 @@ class DatabaseSeeder extends Seeder
             RolesAndPermissionsSeeder::class,
             // --- Other Seeders that use factories and might need the above data ---
             StudentSeeder::class,
+            // SchoolGradeLevelsTableSeeder::class, // Legacy table seeder with hard-coded IDs (do not run)
             // TeacherSeeder::class,
             // AcademicYearSeeder::class,
             // ExamSeeder::class,
         ]);
-       
-        $this->call(SchoolsTableSeeder::class);
-        $this->call(GradeLevelsTableSeeder::class);
-        $this->call(StudentsTableSeeder::class);
-        $this->call(TeachersTableSeeder::class);
-        $this->call(SubjectsTableSeeder::class);
-        $this->call(SettingsTableSeeder::class);
-        $this->call(ClassroomsTableSeeder::class);
-        $this->call(SubjectTeacherTableSeeder::class);
-        $this->call(TimetablesTableSeeder::class);
-        $this->call(ExamsTableSeeder::class);
-        $this->call(AcademicYearsTableSeeder::class);
-        $this->call(StudentAcademicYearsTableSeeder::class);
-        $this->call(AcademicYearFeesTableSeeder::class);
-        $this->call(AcademicYearSubjectsTableSeeder::class);
-        $this->call(ExamSchedulesTableSeeder::class);
-        $this->call(StudentFeePaymentsTableSeeder::class);
-        $this->call(ExamResultsTableSeeder::class);
-        $this->call(SchoolGradeLevelsTableSeeder::class);
-        $this->call(TransportRoutesTableSeeder::class);
-        $this->call(StudentTransportAssignmentsTableSeeder::class);
-        $this->call(FeeInstallmentsTableSeeder::class);
-        $this->call(RolesTableSeeder::class);
-        $this->call(PermissionsTableSeeder::class);
-        $this->call(ModelHasRolesTableSeeder::class);
-        $this->call(ModelHasPermissionsTableSeeder::class);
-        $this->call(RoleHasPermissionsTableSeeder::class);
-        $this->call(StudentNotesTableSeeder::class);
-        $this->call(StudentAbsencesTableSeeder::class);
-        $this->call(StudentWarningsTableSeeder::class);
-        $this->call(PaymentMethodsTableSeeder::class);
     }
 }

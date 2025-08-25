@@ -88,7 +88,7 @@ class StudentFactory extends Factory
             'approved' => $approved,
             'aproove_date' => $approved ? Carbon::instance($this->faker->dateTimeThisYear('-2 months'))->format('Y-m-d H:i:s') : null,
             // For approved_by_user, ensure you have admin users seeded first or set to null.
-            'approved_by_user' => $approved ? (User::where('role', 'admin')->inRandomOrder()->first()?->id ?? null) : null,
+            'approved_by_user' => $approved ? (User::inRandomOrder()->first()?->id ?? null) : null,
             'message_sent' => $approved ? $this->faker->boolean(60) : false,
 
             // Timestamps are handled automatically
@@ -103,7 +103,7 @@ class StudentFactory extends Factory
         return $this->state(fn (array $attributes) => [
             'approved' => true,
             'aproove_date' => now(),
-            'approved_by_user' => User::where('role', 'admin')->inRandomOrder()->first()?->id ?? null,
+            'approved_by_user' => User::inRandomOrder()->first()?->id ?? null,
             'message_sent' => $this->faker->boolean(60),
         ]);
     }

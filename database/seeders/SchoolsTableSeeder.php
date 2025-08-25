@@ -32,7 +32,7 @@ class SchoolsTableSeeder extends Seeder
                 'logo' => NULL,
                 'created_at' => '2025-07-11 17:09:57',
                 'updated_at' => '2025-08-11 22:48:25',
-                'user_id' => 2,
+                'user_id' => NULL,
             ),
             1 => 
             array (
@@ -47,7 +47,7 @@ class SchoolsTableSeeder extends Seeder
                 'logo' => NULL,
                 'created_at' => '2025-07-11 17:10:50',
                 'updated_at' => '2025-07-20 14:18:14',
-                'user_id' => 4,
+                'user_id' => NULL,
             ),
             2 => 
             array (
@@ -62,7 +62,7 @@ class SchoolsTableSeeder extends Seeder
                 'logo' => NULL,
                 'created_at' => '2025-07-11 17:11:35',
                 'updated_at' => '2025-07-19 17:33:01',
-                'user_id' => 7,
+                'user_id' => NULL,
             ),
             3 => 
             array (
@@ -107,7 +107,7 @@ class SchoolsTableSeeder extends Seeder
                 'logo' => NULL,
                 'created_at' => '2025-07-11 17:14:11',
                 'updated_at' => '2025-07-22 18:56:46',
-                'user_id' => 5,
+                'user_id' => NULL,
             ),
             6 => 
             array (
@@ -122,7 +122,7 @@ class SchoolsTableSeeder extends Seeder
                 'logo' => NULL,
                 'created_at' => '2025-07-11 17:14:38',
                 'updated_at' => '2025-07-22 18:56:34',
-                'user_id' => 7,
+                'user_id' => NULL,
             ),
         ));
         
