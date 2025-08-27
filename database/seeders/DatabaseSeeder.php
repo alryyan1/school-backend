@@ -24,22 +24,32 @@ class DatabaseSeeder extends Seeder
     {
         $this->call([
             // --- Foundational Data (Run first) ---
-            // Create the admin user
-            // UserSeeder::class, // Or direct creation as before
             // Create base entities
             SchoolsTableSeeder::class,
-            AcademicYearsTableSeeder::class,
             SubjectSeeder::class,
             GradeLevelSeeder::class,
+            PaymentMethodsTableSeeder::class,
+            
             // --- Linking/Pivot Table Data (Run after base entities) ---
             SchoolGradeLevelSeeder::class, // <-- Assigns Grades to Schools with fees
             ClassroomSeeder::class, // <-- Creates classrooms for each school-grade assignment
-            RolesAndPermissionsSeeder::class,
-            // --- Other Seeders that use factories and might need the above data ---
+            RolesAndPermissionsSeeder::class, // <-- Create roles and permissions first
+            
+            // Create the admin user (after roles exist)
+            UserSeeder::class, // Create superadmin and admin users
+            
+            // --- Student and Related Data ---
             StudentSeeder::class,
+            EnrollmentsTableSeeder::class,
+            FeeInstallmentsTableSeeder::class,
+            StudentFeePaymentsTableSeeder::class,
+            StudentWarningsTableSeeder::class,
+            StudentAbsencesTableSeeder::class,
+            StudentNotesTableSeeder::class,
+            
+            // --- Legacy seeders (commented out) ---
             // SchoolGradeLevelsTableSeeder::class, // Legacy table seeder with hard-coded IDs (do not run)
             // TeacherSeeder::class,
-            // AcademicYearSeeder::class,
             // ExamSeeder::class,
         ]);
     }

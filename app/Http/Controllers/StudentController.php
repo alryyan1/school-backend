@@ -564,6 +564,28 @@ class StudentController extends Controller
     }
 
     /**
+     * Search student by ID.
+     * GET /students/search/{id}
+     */
+    public function searchById($id)
+    {
+        $student = Student::with([
+            'wishedSchool',
+            'enrollments.school',
+            'enrollments.gradeLevel',
+            'enrollments.academicYear',
+            'enrollments.classroom',
+            'enrollments.feeInstallments',
+        ])->find($id);
+
+        if (!$student) {
+            return response()->json(['message' => 'Student not found'], 404);
+        }
+
+        return new StudentResource($student);
+    }
+
+    /**
      * Generate Terms & Conditions PDF.
      * GET /reports/terms-and-conditions
      */

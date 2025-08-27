@@ -40,19 +40,14 @@ use App\Http\Controllers\StudentNoteController;
 
 // routes/api.php
 
-Route::middleware('auth:sanctum')->group(function () {
-    Route::apiResource('users', UserController::class)->except(['index']);
-
-    // Special endpoint for admins only
-    Route::get('users', [UserController::class, 'index'])
-        ->middleware('can:viewAny,App\Models\User');
-});
+// Publicly accessible user routes (auth removed)
+Route::apiResource('users', UserController::class);
 
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [UserController::class, 'store']);
 
 
-Route::middleware('auth:sanctum')->post('/logout', function (Request $request) {
+Route::post('/logout', function (Request $request) {
     $token = $request->user()?->currentAccessToken();
     if ($token instanceof \Laravel\Sanctum\PersonalAccessToken) {
         $token->delete();
@@ -62,7 +57,7 @@ Route::middleware('auth:sanctum')->post('/logout', function (Request $request) {
 
 // routes/api.php
 
-Route::middleware('auth:sanctum')->get('/dashboard-stats', function () {
+Route::get('/dashboard-stats', function () {
     $studentCount = \App\Models\Student::count();
     $teacherCount = \App\Models\Teacher::count();
     // $courseCount = \App\Models\Course::count();
@@ -77,8 +72,10 @@ Route::middleware('auth:sanctum')->get('/dashboard-stats', function () {
 
 
 Route::middleware('auth:sanctum')->get('/auth/verify', [VerificationController::class, 'verify']);
-Route::middleware('auth:sanctum')->group(function () {
+// Publicly accessible API routes (auth removed)
+{
     Route::apiResource('/students', StudentController::class);
+    Route::get('/students/search/{id}', [StudentController::class, 'searchById'])->name('students.searchById');
     Route::post('/students/{student}/accept', [StudentController::class, 'accept'])->name('students.accept');
     // --- School Grade Level Assignment Routes ---
     Route::put('/schools/{school}/grade-levels', [SchoolController::class, 'updateAssignedGradeLevels']);
@@ -90,6 +87,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('/teachers', TeacherController::class);
     Route::apiResource('/schools', SchoolController::class);
+    Route::delete('/schools/{school}/user', [SchoolController::class, 'unassignUser'])->name('schools.unassignUser');
     // --- ACADEMIC YEAR ROUTES ---
     Route::apiResource('/academic-years', AcademicYearController::class); // <-- Add this
     // --- GRADE LEVEL ROUTES ---
@@ -128,6 +126,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // --- USER MANAGEMENT ROUTES ---
     Route::put('/users/{user}/password', [UserController::class, 'updatePassword'])->name('users.updatePassword'); // Change password
     Route::apiResource('users', UserController::class); // Standard CRUD (index requires policy)
+    Route::post('/users/purge-non-admins', [UserController::class, 'purgeNonAdminUsers'])->name('users.purgeNonAdmins');
     // --- EXAM SCHEDULE ROUTES ---
     Route::apiResource('/exam-schedules', ExamScheduleController::class); // <-- Add this
 
@@ -175,4 +174,4 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('student-warnings/{studentWarning}/pdf', [StudentWarningController::class, 'generatePdf'])->name('student-warnings.pdf');
     // --- Student Absences ---
     Route::apiResource('student-absences', StudentAbsenceController::class)->only(['index','store','update','destroy']);
-});
+}

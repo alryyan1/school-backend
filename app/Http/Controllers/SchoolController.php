@@ -282,4 +282,17 @@ class SchoolController extends Controller
         }
     }
 
+    /**
+     * Unassign the manager user from a school (set user_id to null).
+     * DELETE /api/schools/{school}/user
+     */
+    public function unassignUser(School $school)
+    {
+        // $this->authorize('update', $school);
+
+        $school->user_id = null;
+        $school->save();
+
+        return response()->json(['message' => 'تم إلغاء تعيين المستخدم من المدرسة بنجاح', 'data' => new SchoolResource($school->fresh('user'))]);
+    }
 }

@@ -22,7 +22,7 @@ class StudentAbsencesTableSeeder extends Seeder
             0 => 
             array (
                 'id' => 1,
-                'student_academic_year_id' => 5,
+                'student_id' => 1,
                 'absent_date' => '2025-08-13',
                 'reason' => 'erer',
                 'excused' => 0,

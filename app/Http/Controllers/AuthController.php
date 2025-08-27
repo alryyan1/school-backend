@@ -32,10 +32,15 @@ class AuthController extends Controller
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
+        // Compute token expiration based on Sanctum config (minutes) if set
+        $expirationMinutes = config('sanctum.expiration');
+        $expiresAt = $expirationMinutes ? now()->addMinutes($expirationMinutes)->toIso8601String() : null;
+
         return response()->json([
             'user'=>new UserResource($user),
             'token' => $token,
             'token_type' => 'Bearer',
+            'token_expires_at' => $expiresAt,
             'user_type' => null,
         ]);
     }

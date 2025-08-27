@@ -21,9 +21,10 @@ class VerificationController extends Controller
 
         if (!$user) {
             return response()->json([
-                'success' => false,
-                'message' => 'Unauthorized'
-            ], 401);
+                'success' => true,
+                'user' => null,
+                'valid' => false,
+            ], 200);
         }
 
         $spatieRoles = method_exists($user, 'getRoleNames') ? $user->getRoleNames() : collect();
