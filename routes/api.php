@@ -4,6 +4,7 @@ use App\Http\Controllers\AcademicYearController;
 use App\Http\Controllers\AcademicYearSubjectController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\StudentController;
+use App\Http\Controllers\GradeLevelSubjectController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\VerificationController;
@@ -97,6 +98,12 @@ Route::middleware('auth:sanctum')->get('/auth/verify', [VerificationController::
     // --- ACADEMIC YEAR SUBJECT ROUTES ---
     // Usually accessed via index with filters, but include all methods for flexibility
     Route::apiResource('/academic-year-subjects', AcademicYearSubjectController::class);
+    
+    // --- GRADE LEVEL SUBJECT ROUTES ---
+    Route::get('/grade-level-subjects/{gradeLevelId}', [GradeLevelSubjectController::class, 'getAllByGradeLevel']);
+    Route::post('/grade-level-subjects', [GradeLevelSubjectController::class, 'create']);
+    Route::put('/grade-level-subjects/{id}', [GradeLevelSubjectController::class, 'update']);
+    Route::delete('/grade-level-subjects/{id}', [GradeLevelSubjectController::class, 'delete']);
     Route::get('/teachers/{teacher}/subjects', [TeacherController::class, 'getSubjects']); // Get assigned subjects
     Route::post('/students/{student}/photo', [StudentController::class, 'updatePhoto'])
         ->name('students.updatePhoto'); // Optional: Give it 

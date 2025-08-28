@@ -32,6 +32,7 @@ class DatabaseSeeder extends Seeder
             
             // --- Linking/Pivot Table Data (Run after base entities) ---
             SchoolGradeLevelSeeder::class, // <-- Assigns Grades to Schools with fees
+            GradeLevelSubjectSeederFromImage::class, // <-- Assigns subjects to grade levels based on curriculum
             ClassroomSeeder::class, // <-- Creates classrooms for each school-grade assignment
             RolesAndPermissionsSeeder::class, // <-- Create roles and permissions first
             

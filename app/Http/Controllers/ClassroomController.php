@@ -40,23 +40,16 @@ class ClassroomController extends Controller
     public function index(Request $request) {
         $validator = Validator::make($request->all(), [
             'school_id' => 'required|integer|exists:schools,id',
-            'grade_level_id' => 'required|integer|exists:grade_levels,id', // Require grade level for this view
-            'active_academic_year_id' => 'required|integer|exists:academic_years,id', // Require active year
+            'grade_level_id' => 'required|integer|exists:grade_levels,id',
         ]);
-        if ($validator->fails()) return response()->json(['message'=>'School, Grade, and Active Year required', 'errors'=>$validator->errors()], 422);
+        if ($validator->fails()) return response()->json(['message'=>'School and Grade are required', 'errors'=>$validator->errors()], 422);
 
         $schoolId = $request->input('school_id');
         $gradeLevelId = $request->input('grade_level_id');
-        $activeYearId = $request->input('active_academic_year_id');
 
         $query = Classroom::with(['gradeLevel:id,name'])
-            ->with(['enrollments' => function ($query) use ($activeYearId) {
-                $query->where('academic_year_id', $activeYearId)
-                      ->where('status', 'active')
-                      ->with('student:id,student_name,image'); // Get student details for display
-            }])
             ->where('school_id', $schoolId)
-            ->where('grade_level_id', $gradeLevelId); // Filter by grade level
+            ->where('grade_level_id', $gradeLevelId);
 
         $classrooms = $query->orderBy('name')->get();
         return ClassroomResource::collection($classrooms);
