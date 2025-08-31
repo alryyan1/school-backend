@@ -2,7 +2,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\FeeInstallment;
-use App\Models\StudentAcademicYear;
+use App\Models\EnrollMent;
 use Illuminate\Http\Request;
 use App\Http\Resources\FeeInstallmentResource;
 use Carbon\Carbon;
@@ -68,22 +68,20 @@ class FeeInstallmentController extends Controller
     public function index(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'student_academic_year_id' => 'required|integer|exists:student_academic_years,id',
+            'student_id' => 'required|integer|exists:students,id',
         ]);
         if ($validator->fails()) return response()->json(['message' => 'Enrollment ID required', 'errors' => $validator->errors()], 422);
         $installments = FeeInstallment::with([ /* --- ADD EAGER LOADING HERE AS IN getDueSoon --- */
-            'studentAcademicYear.student',
-            'studentAcademicYear.academicYear',
-            'studentAcademicYear.school',
+            'student',
         ])
-            ->where('student_academic_year_id', $request->input('student_academic_year_id'))
+            ->where('student_id', $request->input('student_id'))
             ->orderBy('due_date')->get();
         return FeeInstallmentResource::collection($installments);
     }
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'student_academic_year_id' => 'required|integer|exists:student_academic_years,id',
+            'student_id' => 'required|integer|exists:students,id',
             'title' => 'required|string|max:255',
             'amount_due' => 'required|numeric|min:0.01',
             'due_date' => 'required|date_format:Y-m-d',
@@ -97,9 +95,7 @@ class FeeInstallmentController extends Controller
         $installment = FeeInstallment::create($data);
         return new FeeInstallmentResource(
             $installment->load([ /* --- ADD EAGER LOADING HERE AS IN getDueSoon --- */
-                'studentAcademicYear.student',
-                'studentAcademicYear.academicYear',
-                'studentAcademicYear.school',
+                'student',
             ])
         );
     }
@@ -107,9 +103,7 @@ class FeeInstallmentController extends Controller
     {
         return new FeeInstallmentResource(
             $feeInstallment->load([ /* --- ADD EAGER LOADING HERE AS IN getDueSoon --- */
-                'studentAcademicYear.student',
-                'studentAcademicYear.academicYear',
-                'studentAcademicYear.school',
+                'student',
             ])
         );
     }
@@ -131,9 +125,7 @@ class FeeInstallmentController extends Controller
         $feeInstallment->update($validator->validated());
         return new FeeInstallmentResource(
             $feeInstallment->fresh()->load([ /* --- ADD EAGER LOADING HERE AS IN getDueSoon --- */
-                'studentAcademicYear.student',
-                'studentAcademicYear.academicYear',
-                'studentAcademicYear.school',
+                'student',
             ])
         );
     }
@@ -150,7 +142,7 @@ class FeeInstallmentController extends Controller
      * Automatically generate fee installments for a student's enrollment.
      * POST /api/student-enrollments/{studentAcademicYear}/generate-installments
      */
-    public function generateInstallments(Request $request, StudentAcademicYear $studentAcademicYear)
+    public function generateInstallments(Request $request, EnrollMent $enrollment)
     {
         // Authorization check - can user manage fees for this enrollment?
         // $this->authorize('update', $studentAcademicYear); // Or a specific policy
@@ -169,7 +161,7 @@ class FeeInstallmentController extends Controller
         }
 
         // --- Check for Existing Installments ---
-        if ($studentAcademicYear->feeInstallments()->exists()) {
+        if ($enrollment->feeInstallments()->exists()) {
             return response()->json(['message' => 'لا يمكن إنشاء أقساط تلقائية، يوجد أقساط مسجلة بالفعل لهذا العام.'], 409); // Conflict
         }
 
@@ -181,14 +173,10 @@ class FeeInstallmentController extends Controller
         // Calculate remainder for the last installment to ensure total matches
         $remainder = round($totalAmount - ($amountPerInstallment * $numInstallments), 2);
 
-        // Determine period dates (use Academic Year dates from the enrollment)
-        // Eager load academic year if not automatically loaded by binding
-        $studentAcademicYear->loadMissing('academicYear');
-        if (!$studentAcademicYear->academicYear) {
-            return response()->json(['message' => 'Academic Year details missing for this enrollment.'], 400);
-        }
-        $startDate = Carbon::parse($studentAcademicYear->academicYear->start_date);
-        $endDate = Carbon::parse($studentAcademicYear->academicYear->end_date);
+        // For enrollment table, we use the academic_year string directly
+        // We'll create installments with monthly intervals starting from current month
+        $startDate = Carbon::now()->startOfMonth();
+        $endDate = Carbon::now()->addMonths($numInstallments - 1)->endOfMonth();
 
         // Calculate months between installments (approximate)
         $totalMonths = $endDate->diffInMonths($startDate);
@@ -226,7 +214,7 @@ class FeeInstallmentController extends Controller
             }
 
             $installmentsToCreate[] = [
-                'student_academic_year_id' => $studentAcademicYear->id,
+                'student_id' => $enrollment->student_id,
                 'title' => $title,
                 'amount_due' => $installmentAmount,
                 'amount_paid' => 0.00, // Start unpaid
@@ -256,28 +244,27 @@ class FeeInstallmentController extends Controller
 
         // --- Response ---
         // Fetch the newly created installments to return them
-        $newInstallments = $studentAcademicYear->feeInstallments()->get();
+        $newInstallments = $enrollment->feeInstallments()->get();
         return FeeInstallmentResource::collection($newInstallments); // Return created installments
     }
     /**
      * Generate a PDF Statement of Fee Installments for a specific enrollment.
      * GET /enrollments/{studentAcademicYear}/fee-statement-pdf
      */
-    public function generateStatementPdf(StudentAcademicYear $studentAcademicYear)
+    public function generateStatementPdf(EnrollMent $enrollment)
     {
         // Authorization Check (Example: only admin or parent/student linked to enrollment)
-        // $this->authorize('viewFeeStatement', $studentAcademicYear); // Define this policy ability
+        // $this->authorize('viewFeeStatement', $enrollment); // Define this policy ability
 
         // Eager load necessary data
-        $studentAcademicYear->load([
+        $enrollment->load([
             'student', // Select only needed student fields
-            'academicYear', // Need school_id here
             'school', // Load school details
             'gradeLevel',
             'feeInstallments' // Load all installments
         ]);
 
-        if (!$studentAcademicYear->student || !$studentAcademicYear->academicYear || !$studentAcademicYear->school) {
+        if (!$enrollment->student || !$enrollment->school) {
             abort(404, 'Enrollment details missing.'); // Or handle more gracefully
         }
 
@@ -285,9 +272,9 @@ class FeeInstallmentController extends Controller
         $pdf = new FeeStatementPdf('l', PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
 
         // Set data for custom header/footer
-        $pdf->schoolName = $studentAcademicYear->school->name ?? 'اسم المدرسة';
-        $pdf->studentName = $studentAcademicYear->student->student_name ?? 'اسم الطالب';
-        $pdf->academicYearName = $studentAcademicYear->academicYear->name ?? 'العام الدراسي';
+        $pdf->schoolName = $enrollment->school->name ?? 'اسم المدرسة';
+        $pdf->studentName = $enrollment->student->student_name ?? 'اسم الطالب';
+        $pdf->academicYearName = $enrollment->academic_year ?? 'العام الدراسي';
         $font_path = public_path('\fonts') . '\arial.ttf';
         TCPDF_FONTS::addTTFfont($font_path);
         $font = 'arial';
@@ -350,10 +337,10 @@ class FeeInstallmentController extends Controller
         $totalDue = 0;
         $totalPaid = 0;
 
-        if ($studentAcademicYear->feeInstallments->isEmpty()) {
+        if ($enrollment->feeInstallments->isEmpty()) {
             $pdf->Cell(0, $lineHeight * 2, 'لا توجد أقساط مسجلة لهذا التسجيل.', 'LRB', 1, 'C');
         } else {
-            foreach ($studentAcademicYear->feeInstallments as $installment) {
+            foreach ($enrollment->feeInstallments as $installment) {
                 // ... (calculate due, paid, remaining, statusText, set text color as before) ...
                 $due = (float) $installment->amount_due;
                 $paid = (float) $installment->amount_paid;
@@ -402,7 +389,7 @@ class FeeInstallmentController extends Controller
 
 
         // --- Output ---
-        $fileName = 'fee_statement_' . $studentAcademicYear->student->id . '_' . $studentAcademicYear->academicYear->name . '.pdf';
+        $fileName = 'fee_statement_' . $enrollment->student->id . '_' . $enrollment->academic_year . '.pdf';
         // Clean filename (replace slashes in year name)
         $fileName = str_replace('/', '-', $fileName);
 
@@ -423,15 +410,7 @@ class FeeInstallmentController extends Controller
 
         $installmentsDueSoon = FeeInstallment::with([
             // --- EAGER LOAD NESTED DATA ---
-            'studentAcademicYear' => function ($query) {
-                $query->with([
-                    'student',
-                    'academicYear', // Relationship on StudentAcademicYear is 'academicYear'
-                    'school',     // Relationship on StudentAcademicYear is 'school'
-                    'gradeLevel'  // Relationship on StudentAcademicYear is 'gradeLevel'
-                ]);
-            }
-            // ------------------------------
+            'student',
         ])
             ->whereBetween('due_date', [$today->toDateString(), $dueDateLimit->toDateString()])
             // Filter out already fully paid installments

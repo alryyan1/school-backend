@@ -24,7 +24,7 @@ class ExamResultResource extends JsonResource
             'remarks' => $this->notes, // Corrected field name based on migration ('notes' vs 'remarks') -> use 'remarks'
 
             // For display in frontend, load these relations in the controller
-            'student_enrollment' => new StudentAcademicYearResource($this->whenLoaded('studentAcademicYear')),
+            'student_enrollment' => new EnrollmentResource($this->whenLoaded('studentAcademicYear')),
             'exam_schedule' => new ExamScheduleResource($this->whenLoaded('examSchedule')),
             // 'entered_by' => new UserResource($this->whenLoaded('enteredBy')), // Optional
 

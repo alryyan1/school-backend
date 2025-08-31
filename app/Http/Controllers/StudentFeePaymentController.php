@@ -159,8 +159,7 @@ class StudentFeePaymentController extends Controller
             'payments' => function ($query) {
                 $query->orderBy('payment_date', 'desc');
             }, // Order payments
-            'studentAcademicYear.student:id,student_name',
-            'studentAcademicYear.academicYear:id,name'
+            'student:id,student_name'
         ]);
 
         // --- PDF Creation ---
@@ -169,7 +168,7 @@ class StudentFeePaymentController extends Controller
 
         // Set data for header
         $pdf->installmentTitle = $feeInstallment->title ?? 'قسط';
-        $pdf->studentName = $feeInstallment->studentAcademicYear?->student?->student_name ?? 'غير معروف';
+        $pdf->studentName = $feeInstallment->student?->student_name ?? 'غير معروف';
         $pdf->dueDate = $feeInstallment->due_date?->format('Y/m/d') ?? '-';
 
         // Metadata

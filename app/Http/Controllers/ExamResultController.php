@@ -4,10 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\ExamResult;
 use App\Models\ExamSchedule;
-use App\Models\StudentAcademicYear;
+use App\Models\EnrollMent;
 use Illuminate\Http\Request;
 use App\Http\Resources\ExamResultResource;
-use App\Http\Resources\StudentAcademicYearResource; // For pending students
+use App\Http\Resources\EnrollmentResource; // For pending students
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB; // For transaction
 use Illuminate\Support\Facades\Validator;
@@ -55,19 +55,19 @@ class ExamResultController extends Controller
         $studentsWithResultsIds = ExamResult::where('exam_schedule_id', $examSchedule->id)
                                         ->pluck('student_academic_year_id');
 
-        $pendingStudentsEnrollments = StudentAcademicYear::with('student:id,student_name,image,goverment_id')
-            ->where('academic_year_id', $examSchedule->exam->academic_year_id)
+        $pendingStudentsEnrollments = EnrollMent::with('student:id,student_name,image,goverment_id')
+            ->where('academic_year', $examSchedule->exam->academic_year)
             ->where('grade_level_id', $examSchedule->grade_level_id)
             ->where('school_id', $examSchedule->exam->school_id)
             ->where('status', 'active') // Only active students
             ->whereNotIn('id', $studentsWithResultsIds) // Exclude those with results
-            ->join('students', 'student_academic_years.student_id', '=', 'students.id') // For ordering
+            ->join('students', 'enrollments.student_id', '=', 'students.id') // For ordering
             ->orderBy('students.student_name')
-            ->select('student_academic_years.*') // Select all from enrollments after join
+            ->select('enrollments.*') // Select all from enrollments after join
             ->get();
 
-        // Use StudentAcademicYearResource to include student details in a structured way
-        return StudentAcademicYearResource::collection($pendingStudentsEnrollments);
+        // Use EnrollmentResource to include student details in a structured way
+        return EnrollmentResource::collection($pendingStudentsEnrollments);
     }
 
     /**

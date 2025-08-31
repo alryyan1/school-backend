@@ -2,46 +2,106 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 /**
- * 
+ * Enrollment Model
  *
- * @method static \Illuminate\Database\Eloquent\Builder|EnrollMent newModelQuery()
- * @method static \Illuminate\Database\Eloquent\Builder|EnrollMent newQuery()
- * @method static \Illuminate\Database\Eloquent\Builder|EnrollMent query()
+ * @property int $id
+ * @property int $student_id
+ * @property int $school_id
+ * @property string $academic_year
+ * @property int $grade_level_id
+ * @property int|null $classroom_id
+ * @property string $status
+ * @property string|null $enrollment_type
+ * @property int $fees
+ * @property int $discount
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ * @property-read \App\Models\Classroom|null $classroom
+ * @property-read \App\Models\GradeLevel $gradeLevel
+ * @property-read \App\Models\School $school
+ * @property-read \App\Models\Student $student
+ * @property-read \App\Models\StudentTransportAssignment|null $transportAssignment
+ * @method static \Database\Factories\EnrollmentFactory factory($count = null, $state = [])
+ * @method static \Illuminate\Database\Eloquent\Builder|Enrollment newModelQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|Enrollment newQuery()
+ * @method static \Illuminate\Database\Eloquent\Builder|Enrollment query()
+ * @method static \Illuminate\Database\Eloquent\Builder|Enrollment whereAcademicYear($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Enrollment whereClassroomId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Enrollment whereCreatedAt($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Enrollment whereDiscount($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Enrollment whereFees($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Enrollment whereGradeLevelId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Enrollment whereId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Enrollment whereSchoolId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Enrollment whereStatus($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Enrollment whereStudentId($value)
+ * @method static \Illuminate\Database\Eloquent\Builder|Enrollment whereUpdatedAt($value)
  * @mixin \Eloquent
  */
 class EnrollMent extends Model
 {
+    use HasFactory;
 
+    protected $table = 'enrollments';
 
-    protected $table = 'student_academic_years';
-    // School relationship
-    public function school(): BelongsTo
+    protected $fillable = [
+        'student_id',
+        'school_id',
+        'academic_year',
+        'grade_level_id',
+        'classroom_id', // Nullable
+        'status',
+        'enrollment_type',
+        'fees',
+        'discount',
+    ];
+
+    // Optional: Cast status if you create a PHP Enum later
+    // protected $casts = [ 'status' => EnrollmentStatusEnum::class ];
+
+    public function student(): BelongsTo
     {
-        return $this->belongsTo(School::class);
+        return $this->belongsTo(Student::class);
     }
-    // GradeLevel relationship
+
     public function gradeLevel(): BelongsTo
     {
         return $this->belongsTo(GradeLevel::class);
     }
-    // AcademicYear relationship
-    public function academicYear(): BelongsTo
-    {
-        return $this->belongsTo(AcademicYear::class);
-    }
-    // Classroom relationship
+
     public function classroom(): BelongsTo
     {
+        // Handles nullable classroom_id
         return $this->belongsTo(Classroom::class);
     }
-    // Fee installments for this enrollment (student academic year)
-    public function feeInstallments(): HasMany
+
+    public function school(): BelongsTo
     {
-        return $this->hasMany(FeeInstallment::class, 'student_academic_year_id');
+        return $this->belongsTo(School::class);
     }
+
+    public function transportAssignment(): HasOne // A student has one assignment per year
+    {
+        return $this->hasOne(StudentTransportAssignment::class, 'student_academic_year_id');
+    }
+
+    public function payments(): HasMany {
+        return $this->hasMany(StudentFeePayment::class, 'student_academic_year_id');
+    }
+
+    public function feeInstallments(): HasMany {
+                                return $this->hasMany(FeeInstallment::class, 'student_id', 'student_id')->orderBy('due_date'); // Order by due date
+        }
+
+        public function notes(): HasMany
+        {
+            return $this->hasMany(StudentNote::class);
+        }
 }

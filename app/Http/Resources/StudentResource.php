@@ -76,11 +76,13 @@ class StudentResource extends JsonResource
             // Correct spelling 'aproove_date' based on your migration
             'aproove_date' => $this->aproove_date, // Relies on $casts['datetime'] in Model
             'approved_by_user_id' => $this->approved_by_user, // Send the ID
+            'approved_by_user' => $this->whenLoaded('approvedByUser', function () {
+                return [
+                    'id' => $this->approvedByUser->id,
+                    'name' => $this->approvedByUser->name,
+                ];
+            }),
             'message_sent' => $this->message_sent, // Relies on $casts['boolean'] in Model
-
-            // Optional: Include nested approver details if relationship is loaded
-            // Requires 'approver' relationship in Student model and UserResource
-            // 'approver' => new UserResource($this->whenLoaded('approver')),
 
             // Timestamps
             'created_at' => $this->created_at ? $this->created_at->toIso8601String() : null,

@@ -39,17 +39,77 @@ class StudentPdf extends TCPDF // Optional: Extend TCPDF for custom Headers/Foot
 
 class StudentController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $students = Student::with(
+        $query = Student::with(
             'wishedSchool',
             'enrollments.school',
             'enrollments.gradeLevel',
-            'enrollments.academicYear',
             'enrollments.classroom',
-            'enrollments.feeInstallments'
-        )->get();
-        return  StudentResource::collection($students);
+            'enrollments.feeInstallments',
+            'approvedByUser'
+        );
+
+        // Search term filter
+        if ($request->filled('search')) {
+            $searchTerm = $request->get('search');
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('student_name', 'like', "%{$searchTerm}%")
+                  ->orWhere('father_name', 'like', "%{$searchTerm}%")
+                  ->orWhere('father_phone', 'like', "%{$searchTerm}%")
+                  ->orWhere('mother_name', 'like', "%{$searchTerm}%")
+                  ->orWhere('mother_phone', 'like', "%{$searchTerm}%")
+                  ->orWhere('email', 'like', "%{$searchTerm}%")
+                  ->orWhere('goverment_id', 'like', "%{$searchTerm}%");
+            });
+        }
+
+        // Wished school filter
+        if ($request->filled('wished_school_id')) {
+            $query->where('wished_school', $request->get('wished_school_id'));
+        }
+
+        // Date range filter
+        if ($request->filled('date_type') && $request->get('date_type') !== ' ') {
+            $dateType = $request->get('date_type');
+            if ($request->filled('start_date')) {
+                $query->whereDate($dateType, '>=', $request->get('start_date'));
+            }
+            if ($request->filled('end_date')) {
+                $query->whereDate($dateType, '<=', $request->get('end_date'));
+            }
+        }
+
+        // Only enrolled students filter
+        if ($request->boolean('only_enrolled')) {
+            $query->whereHas('enrollments');
+        }
+
+        // Only approved students filter
+        if ($request->boolean('only_approved')) {
+            $query->where('approved', true);
+        }
+
+        // Sorting
+        $sortBy = $request->get('sort_by', 'id');
+        $sortOrder = $request->get('sort_order', 'desc');
+        $query->orderBy($sortBy, $sortOrder);
+
+        // Pagination
+        $perPage = $request->get('per_page', 10);
+        $students = $query->paginate($perPage);
+
+        return response()->json([
+            'data' => StudentResource::collection($students),
+            'pagination' => [
+                'current_page' => $students->currentPage(),
+                'last_page' => $students->lastPage(),
+                'per_page' => $students->perPage(),
+                'total' => $students->total(),
+                'from' => $students->firstItem(),
+                'to' => $students->lastItem(),
+            ]
+        ]);
     }
     public function updatePhoto(Request $request, Student $student)
     {
@@ -133,7 +193,7 @@ class StudentController extends Controller
             return response()->json(['message' => $errorMessage], 422);
         }
         $data = $request->all();
-        $data['approved_by_user'] = Auth::id();
+        $data['approved_by_user'] = Auth::id() ?? 1; // Default to user ID 1 if not authenticated
         $student = Student::create($data);
 
         return response()->json($student, 201);
@@ -148,9 +208,9 @@ class StudentController extends Controller
             'wishedSchool',
             'enrollments.school',
             'enrollments.gradeLevel',
-            'enrollments.academicYear',
             'enrollments.classroom',
             'enrollments.feeInstallments',
+            'approvedByUser',
         ]);
         return new StudentResource($student);
     }
@@ -215,12 +275,12 @@ class StudentController extends Controller
         $student->update([
             'approved' => true,
             'aproove_date' => now(),
-            'approved_by_user' => auth()->id(),
+            'approved_by_user' => auth()->id() ?? 1, // Default to user ID 1 if not authenticated
         ]);
 
         return response()->json([
             'message' => 'Student accepted successfully',
-            'student' => new StudentResource($student->load('wishedSchool'))
+            'student' => new StudentResource($student->load(['wishedSchool', 'approvedByUser']))
         ]);
     }
 
@@ -573,7 +633,6 @@ class StudentController extends Controller
             'wishedSchool',
             'enrollments.school',
             'enrollments.gradeLevel',
-            'enrollments.academicYear',
             'enrollments.classroom',
             'enrollments.feeInstallments',
         ])->find($id);

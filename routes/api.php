@@ -16,7 +16,8 @@ use App\Http\Controllers\FeeInstallmentController;
 use App\Http\Controllers\GradeLevelController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\SchoolController;
-use App\Http\Controllers\StudentAcademicYearController;
+
+use App\Http\Controllers\EnrollMentController;
 use App\Http\Controllers\StudentFeePaymentController;
 use App\Http\Controllers\StudentTransportAssignmentController;
 use App\Http\Controllers\StudentWarningController;
@@ -110,11 +111,12 @@ Route::middleware('auth:sanctum')->get('/auth/verify', [VerificationController::
     Route::put('/teachers/{teacher}/subjects', [TeacherController::class, 'updateSubjects']); // Update assigned subjects
     // --- CLASSROOM ROUTES ---
     Route::apiResource('/classrooms', ClassroomController::class); // <-- Add this
-    Route::apiResource('/student-enrollments', StudentAcademicYearController::class);
-    // --- STUDENT ENROLLMENT ROUTES ---
-    Route::get('/enrollable-students', [StudentAcademicYearController::class, 'getEnrollableStudents']);
-    Route::get('/getAllStudentAcademicYear', [StudentAcademicYearController::class, 'getAllStudentAcademicYear']);
-    Route::get('search', [StudentAcademicYearController::class, 'search']);
+    // --- ENROLLMENT ROUTES ---
+    Route::apiResource('/enrollments', EnrollMentController::class);
+    Route::get('/enrollable-students', [EnrollMentController::class, 'getEnrollableStudents']);
+    Route::get('/enrollments/search', [EnrollMentController::class, 'search']);
+    Route::get('/unassigned-students-for-grade', [EnrollMentController::class, 'getUnassignedStudentsForGrade']);
+    Route::put('/enrollments/{enrollment}/assign-classroom', [EnrollMentController::class, 'assignToClassroom']);
 
     // --- STUDENT FEE PAYMENT ROUTES ---
     Route::apiResource('/student-fee-payments', StudentFeePaymentController::class);
@@ -124,7 +126,7 @@ Route::middleware('auth:sanctum')->get('/auth/verify', [VerificationController::
     Route::get('/fee-installment/due-soon', [FeeInstallmentController::class, 'getDueSoon'])
          ->name('installments.dueSoon');
     // --- Add route for generating installments ---
-    Route::post('/student-enrollments/{studentAcademicYear}/generate-installments', [FeeInstallmentController::class, 'generateInstallments'])
+    Route::post('/enrollments/{enrollment}/generate-installments', [FeeInstallmentController::class, 'generateInstallments'])
         ->name('enrollments.installments.generate');
     // --- EXAM ROUTES ---
     Route::apiResource('/exams', ExamController::class);
@@ -144,9 +146,7 @@ Route::middleware('auth:sanctum')->get('/auth/verify', [VerificationController::
      Route::post('/notify/whatsapp/installment/{feeInstallment}', [NotificationController::class, 'sendInstallmentReminder'])
      ->name('notify.installment.whatsapp');
 
-     Route::get('/unassigned-students-for-grade', [StudentAcademicYearController::class, 'getUnassignedStudentsForGrade'])->name('enrollments.unassignedForGrade');
-     Route::put('/student-enrollments/{studentAcademicYear}/assign-classroom', [StudentAcademicYearController::class, 'assignToClassroom'])->name('enrollments.assignClassroom');
-     Route::apiResource('/student-enrollments', StudentAcademicYearController::class)->except(['show']); // show might not be needed for the manager
+
      Route::apiResource('/student-fee-payments', StudentFeePaymentController::class);
      Route::apiResource('/payment-methods', \App\Http\Controllers\PaymentMethodController::class)->only(['index','store']);
      Route::apiResource('/exams', ExamController::class);

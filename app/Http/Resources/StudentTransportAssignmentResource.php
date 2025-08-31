@@ -9,7 +9,7 @@ class StudentTransportAssignmentResource extends JsonResource {
             'pickup_point' => $this->pickup_point,
             'dropoff_point' => $this->dropoff_point,
             // Load necessary details in controller
-            'student_enrollment' => new StudentAcademicYearResource($this->whenLoaded('studentAcademicYear')),
+            'student_enrollment' => new EnrollmentResource($this->whenLoaded('studentAcademicYear')),
             'transport_route' => new TransportRouteResource($this->whenLoaded('transportRoute')),
             'created_at' => $this->created_at->toIso8601String(),
             'updated_at' => $this->updated_at->toIso8601String(),

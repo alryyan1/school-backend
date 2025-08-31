@@ -9,12 +9,12 @@ use Illuminate\Support\Facades\Auth;
 
 class StudentNoteController extends Controller
 {
-    // List all notes for a given student_academic_years_id
+    // List all notes for a given enrollment_id
     public function index(Request $request)
     {
-        $studentAcademicYearId = $request->query('student_academic_years_id');
+        $enrollmentId = $request->query('enrollment_id');
         $notes = StudentNote::with('user')
-            ->where('student_academic_years_id', $studentAcademicYearId)
+            ->where('enrollment_id', $enrollmentId)
             ->orderByDesc('created_at')
             ->get();
         return StudentNoteResource::collection($notes);
@@ -24,13 +24,13 @@ class StudentNoteController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'student_academic_years_id' => 'required|exists:student_academic_years,id',
+            'enrollment_id' => 'required|exists:enrollments,id',
             'note' => 'required|string',
         ]);
         $note = StudentNote::create([
-            'student_academic_years_id' => $request->student_academic_years_id,
+            'enrollment_id' => $request->enrollment_id,
             'note' => $request->note,
-            'user_id' => Auth::id(),
+            'user_id' => Auth::id() ?? 1, // Default to user ID 1 if not authenticated
         ]);
         $note->load('user');
         return new StudentNoteResource($note);

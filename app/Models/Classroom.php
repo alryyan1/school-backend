@@ -82,7 +82,7 @@ class Classroom extends Model
     public function enrollments(): HasMany
     {
         // A classroom can have many student enrollment records assigned to it via 'classroom_id'
-        return $this->hasMany(StudentAcademicYear::class);
+        return $this->hasMany(EnrollMent::class);
     }
     /**
      * Get the students assigned to this classroom (requires student model update).

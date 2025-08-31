@@ -102,4 +102,18 @@ class Student extends Model
     {
         return $this->hasMany(Enrollment::class);
     }
+
+    public function feeInstallments(): HasMany
+    {
+        return $this->hasMany(FeeInstallment::class);
+    }
+
+    /**
+     * Get the user who approved this student.
+     */
+    public function approvedByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by_user');
+    }
+
 }

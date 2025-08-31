@@ -3,6 +3,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use App\Http\Resources\StudentResource;
 
 class FeeInstallmentResource extends JsonResource
 {
@@ -10,7 +11,7 @@ class FeeInstallmentResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'student_academic_year_id' => $this->student_academic_year_id,
+            'student_id' => $this->student_id,
             'title' => $this->title,
             'amount_due' => $this->amount_due,
             'amount_paid' => $this->amount_paid,
@@ -22,7 +23,7 @@ class FeeInstallmentResource extends JsonResource
       
             // Use 'student_enrollment' as key for clarity in JSON,
             // but load 'studentAcademicYear' relationship from the model
-            'student_enrollment' => new StudentAcademicYearResource($this->whenLoaded('studentAcademicYear')),            // ---------------------------
+            'student' => new StudentResource($this->whenLoaded('student')),            // ---------------------------
 
             // Optional: You might already have payments loaded here if needed elsewhere
             // 'payments' => StudentFeePaymentResource::collection($this->whenLoaded('payments')),

@@ -10,14 +10,18 @@ class StudentNote extends Model
     use HasFactory;
 
     protected $fillable = [
-        'student_academic_years_id',
+        'enrollment_id',
         'note',
         'user_id',
     ];
 
-    public function studentAcademicYear()
+    protected $attributes = [
+        'user_id' => 1, // Default user ID
+    ];
+
+    public function enrollment()
     {
-        return $this->belongsTo(EnrollMent::class, 'student_academic_years_id');
+        return $this->belongsTo(EnrollMent::class);
     }
 
     public function user()

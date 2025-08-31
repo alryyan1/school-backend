@@ -2,7 +2,7 @@
 
 namespace App\Rules;
 
-use App\Models\StudentAcademicYear;
+use App\Models\EnrollMent;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 
@@ -20,7 +20,7 @@ class PaymentExceedTotal implements ValidationRule
      */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-        $student = StudentAcademicYear::find($this->studentAcademicId);
+        $student = EnrollMent::find($this->studentAcademicId);
         $amount_paid =   $student->payments()->sum('amount');
         $fees = $student->fees;
         if($amount_paid + $value > $fees){

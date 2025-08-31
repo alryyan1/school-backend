@@ -24,15 +24,13 @@ class NotificationController extends Controller
 
         // Load necessary relationships
         $feeInstallment->load([
-            'studentAcademicYear.student:id,student_name,father_phone,mother_phone',
-            'studentAcademicYear.academicYear:id,name'
+            'student:id,student_name,father_phone,mother_phone'
         ]);
 
-        $student = $feeInstallment->studentAcademicYear?->student;
-        $academicYear = $feeInstallment->studentAcademicYear?->academicYear;
+        $student = $feeInstallment->student;
 
-        if (!$student || !$academicYear) {
-            return response()->json(['message' => 'بيانات الطالب أو العام الدراسي غير متوفرة.'], 404);
+        if (!$student) {
+            return response()->json(['message' => 'بيانات الطالب غير متوفرة.'], 404);
         }
 
         // --- Determine Recipient Phone Number ---

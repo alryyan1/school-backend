@@ -24,7 +24,7 @@ class StudentWarning extends Model
 
     public function studentAcademicYear(): BelongsTo
     {
-        return $this->belongsTo(StudentAcademicYear::class);
+        return $this->belongsTo(EnrollMent::class);
     }
 
     public function issuedBy(): BelongsTo
