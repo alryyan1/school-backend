@@ -29,24 +29,24 @@ class EnrollMentController extends Controller
                 return response()->json(['message' => 'الرجاء تحديد العام الدراسي على الأقل', 'errors' => $validator->errors()], 422);
             }
     
-            // Eager load necessary relations
+            // Build query with proper table references
             $query = EnrollMent::with([
                 'student', // Select only needed student columns
                 'gradeLevel', // Select only needed grade columns
                 'classroom', // Select only needed classroom columns
                 'school' // Load School
             ])
-                ->where('school_id', $request->input('school_id')) // Filter by school
-                ->where('academic_year', $request->input('academic_year')); // Filter by year
+                ->where('enrollments.school_id', $request->input('school_id')) // Filter by school
+                ->where('enrollments.academic_year', $request->input('academic_year')); // Filter by year
     
             if ($request->filled('grade_level_id')) {
-                $query->where('grade_level_id', $request->input('grade_level_id'));
+                $query->where('enrollments.grade_level_id', $request->input('grade_level_id'));
             }
             if ($request->filled('classroom_id')) {
-                $query->where('classroom_id', $request->input('classroom_id'));
+                $query->where('enrollments.classroom_id', $request->input('classroom_id'));
             }
     
-            // Order by student name?
+            // Join with students table for ordering
             $query->join('students', 'enrollments.student_id', '=', 'students.id')
                 ->orderBy('students.student_name');
     
