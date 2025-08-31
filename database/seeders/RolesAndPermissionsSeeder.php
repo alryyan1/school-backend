@@ -20,33 +20,55 @@ class RolesAndPermissionsSeeder extends Seeder
         DB::table('model_has_permissions')->delete();
         Permission::query()->delete();
 
+        // Create the 5 new permissions
         $acceptStudent = Permission::firstOrCreate(['name' => 'قبول الطالب']);
-        $discount = Permission::firstOrCreate(['name' => 'التخفيض']);
-        $assign = Permission::firstOrCreate(['name' => 'التعيين']);
+        $addStudent = Permission::firstOrCreate(['name' => 'اضافه طالب']);
+        $editStudent = Permission::firstOrCreate(['name' => 'تعديل بيانات الطالب']);
+        $payFees = Permission::firstOrCreate(['name' => 'سداد رسوم الطالب']);
+        $assignStudent = Permission::firstOrCreate(['name' => 'تعيين الطالب']);
 
+        // === Define Roles and Assign Permissions ===
 
-        // === Define Roles and Assign Permissions (restricted to three roles) ===
+        // Clean up any existing roles
+        Role::query()->delete();
 
-        // Clean up any roles not in the allowed list
-        $allowed = ['admin', 'school manager', 'accountant'];
-        Role::whereNotIn('name', $allowed)->delete();
-
-        // Admin: full access
+        // Admin: full access to all permissions
         $adminRole = Role::firstOrCreate(['name' => 'admin']);
-        $adminRole->syncPermissions(Permission::all());
+        $adminRole->syncPermissions([
+            $acceptStudent, 
+            $addStudent, 
+            $editStudent, 
+            $payFees, 
+            $assignStudent
+        ]);
 
-        // School Manager: manage school-level operations
+        // School Manager: can accept, add, edit, and assign students
         $schoolManager = Role::firstOrCreate(['name' => 'school manager']);
-        $schoolManager->syncPermissions([$acceptStudent, $discount, $assign]);
+        $schoolManager->syncPermissions([
+            $acceptStudent, 
+            $addStudent, 
+            $editStudent, 
+            $assignStudent
+        ]);
 
-        // Accountant: finance-related
+        // Accountant: can add students and handle fee payments
         $accountantRole = Role::firstOrCreate(['name' => 'accountant']);
-        $accountantRole->syncPermissions([$discount]);
+        $accountantRole->syncPermissions([
+            $addStudent, 
+            $payFees
+        ]);
 
+        // Teacher: can only edit student data
+        $teacherRole = Role::firstOrCreate(['name' => 'teacher']);
+        $teacherRole->syncPermissions([
+            $editStudent
+        ]);
 
-        // --- Optionally ensure a default admin user exists ---
+        // --- Ensure a default admin user exists ---
         $admin = User::firstOrCreate(['email' => 'admin@example.com'], [
-            'name' => 'Administrator', 'username' => 'admin', 'password' => Hash::make('12345678')
+            'name' => 'Administrator', 
+            'username' => 'admin', 
+            'password' => Hash::make('12345678')
         ]);
         $admin->syncRoles(['admin']);
     }
