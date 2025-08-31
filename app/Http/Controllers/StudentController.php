@@ -491,6 +491,16 @@ class StudentController extends Controller
             }
         }
 
+        // Enrollment filter
+        if ($request->filled('only_enrolled') && $request->input('only_enrolled') === 'true') {
+            $query->whereHas('enrollments');
+        }
+
+        // Approval filter
+        if ($request->filled('only_approved') && $request->input('only_approved') === 'true') {
+            $query->where('approved', true);
+        }
+
         // Sorting
         $sortBy = $request->input('sort_by', 'id');
         $sortOrder = $request->input('sort_order', 'desc');
@@ -528,6 +538,16 @@ class StudentController extends Controller
                 $dateRange[] = "إلى: " . $request->input('end_date');
             }
             $filters[] = $dateType . " (" . implode(' - ', $dateRange) . ")";
+        }
+
+        // Add enrollment filter info
+        if ($request->filled('only_enrolled') && $request->input('only_enrolled') === 'true') {
+            $filters[] = "المسجلون فقط";
+        }
+
+        // Add approval filter info
+        if ($request->filled('only_approved') && $request->input('only_approved') === 'true') {
+            $filters[] = "المقبولون فقط";
         }
         
         if (!empty($filters)) {
