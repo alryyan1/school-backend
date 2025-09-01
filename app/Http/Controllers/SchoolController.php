@@ -46,6 +46,7 @@ class SchoolController extends Controller
             'establishment_date' => 'nullable|date_format:Y-m-d',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // Logo validation
             'user_id' => 'nullable|integer|exists:users,id', // User/Manager assignment
+            'annual_fees' => 'nullable|numeric|min:0|max:999999.99', // Annual fees validation
             // 'is_active' => 'sometimes|boolean', // Uncomment if added later
         ]);
 
@@ -100,6 +101,7 @@ class SchoolController extends Controller
             'establishment_date' => 'nullable|date_format:Y-m-d',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // Validate new logo
             'user_id' => 'nullable|integer|exists:users,id', // User/Manager assignment
+            'annual_fees' => 'nullable|numeric|min:0|max:999999.99', // Annual fees validation
             // 'is_active' => 'sometimes|boolean', // Uncomment if added later
         ]);
 

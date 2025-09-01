@@ -30,6 +30,7 @@ class SchoolResource extends JsonResource
             'establishment_date' => $this->establishment_date, // Formatted by $casts
             'logo_path' => $this->logo, // Raw path
             'logo_url' => $logoUrl, // Full URL for display
+            'annual_fees' => $this->annual_fees, // Annual fees amount
             'user_id' => $this->user_id, // Manager/User ID
             'user' => $this->whenLoaded('user', function () {
                 return [

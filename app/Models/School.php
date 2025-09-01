@@ -58,6 +58,7 @@ class School extends Model
         'establishment_date',
         'logo', // Path to logo file
         'user_id', // Manager/User assigned to this school
+        'annual_fees', // Annual fees for the school
         // 'is_active', // Uncomment if added later
     ];
     /**
@@ -70,6 +71,7 @@ class School extends Model
     }
     protected $casts = [
         'establishment_date' => 'date:Y-m-d', // Cast to date, format on serialization
+        'annual_fees' => 'decimal:2', // Cast to decimal with 2 decimal places
         // 'is_active' => 'boolean', // Uncomment if added later
     ];
     
