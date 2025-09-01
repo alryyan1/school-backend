@@ -19,8 +19,6 @@ class UserResource extends JsonResource
             'name' => $this->name,
             'username' => $this->username,
             'email' => $this->email,
-            // Map to a simple role label for frontend compatibility: only 'admin' else null
-            'role' => (method_exists($this->resource, 'getRoleNames') && $this->resource->getRoleNames()->contains('admin')) ? 'admin' : null,
             'phone' => $this->phone,
             'gender' => $this->gender,
             'email_verified_at' => $this->email_verified_at ? $this->email_verified_at->toIso8601String() : null,

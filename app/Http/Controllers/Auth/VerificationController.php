@@ -4,6 +4,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\UserResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -27,17 +28,12 @@ class VerificationController extends Controller
             ], 200);
         }
 
-        $spatieRoles = method_exists($user, 'getRoleNames') ? $user->getRoleNames() : collect();
-        $isAdmin = $spatieRoles && $spatieRoles->contains('admin');
+        // Load roles and permissions like in the login endpoint
+        $user = $user->loadMissing('roles', 'permissions');
+
         return response()->json([
             'success' => true,
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'email' => $user->email,
-                'role' => $isAdmin ? 'admin' : null,
-                'permissions' => method_exists($user, 'getAllPermissions') ? $user->getAllPermissions()->pluck('name') : [],
-            ],
+            'user' => new UserResource($user),
             'valid' => true
         ]);
     }

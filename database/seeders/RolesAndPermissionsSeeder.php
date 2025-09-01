@@ -71,5 +71,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'password' => Hash::make('12345678')
         ]);
         $admin->syncRoles(['admin']);
+
+        $superadmin = User::where('username', 'superadmin')->first();
+        if ($superadmin) {
+            $superadmin->syncRoles(['admin']);
+        }
     }
 }

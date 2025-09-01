@@ -37,7 +37,7 @@ class AuthController extends Controller
         $expiresAt = $expirationMinutes ? now()->addMinutes($expirationMinutes)->toIso8601String() : null;
 
         return response()->json([
-            'user'=>new UserResource($user),
+            'user'=>new UserResource($user->loadMissing('roles', 'permissions')),
             'token' => $token,
             'token_type' => 'Bearer',
             'token_expires_at' => $expiresAt,

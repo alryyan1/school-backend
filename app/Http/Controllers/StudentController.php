@@ -85,9 +85,19 @@ class StudentController extends Controller
             $query->whereHas('enrollments');
         }
 
+        // Only not enrolled students filter
+        if ($request->boolean('only_not_enrolled')) {
+            $query->whereDoesntHave('enrollments');
+        }
+
         // Only approved students filter
         if ($request->boolean('only_approved')) {
             $query->where('approved', true);
+        }
+
+        // Only not approved students filter
+        if ($request->boolean('only_not_approved')) {
+            $query->where('approved', false);
         }
 
         // Sorting
@@ -496,9 +506,19 @@ class StudentController extends Controller
             $query->whereHas('enrollments');
         }
 
+        // Not enrolled filter
+        if ($request->filled('only_not_enrolled') && $request->input('only_not_enrolled') === 'true') {
+            $query->whereDoesntHave('enrollments');
+        }
+
         // Approval filter
         if ($request->filled('only_approved') && $request->input('only_approved') === 'true') {
             $query->where('approved', true);
+        }
+
+        // Not approved filter
+        if ($request->filled('only_not_approved') && $request->input('only_not_approved') === 'true') {
+            $query->where('approved', false);
         }
 
         // Sorting
@@ -545,9 +565,19 @@ class StudentController extends Controller
             $filters[] = "المسجلون فقط";
         }
 
+        // Add not enrolled filter info
+        if ($request->filled('only_not_enrolled') && $request->input('only_not_enrolled') === 'true') {
+            $filters[] = "غير المسجلين";
+        }
+
         // Add approval filter info
         if ($request->filled('only_approved') && $request->input('only_approved') === 'true') {
             $filters[] = "المقبولون فقط";
+        }
+
+        // Add not approved filter info
+        if ($request->filled('only_not_approved') && $request->input('only_not_approved') === 'true') {
+            $filters[] = "غير المقبولين";
         }
         
         if (!empty($filters)) {
