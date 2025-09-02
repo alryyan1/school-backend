@@ -7,7 +7,7 @@ use App\Models\User;
 use App\Models\Student;
 use App\Models\School;
 use App\Models\GradeLevel;
-use App\Models\EnrollMent;
+use App\Models\Enrollment;
 use App\Models\StudentLedger;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Testing\WithFaker;

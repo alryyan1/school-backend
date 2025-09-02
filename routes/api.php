@@ -17,7 +17,7 @@ use App\Http\Controllers\GradeLevelController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\SchoolController;
 
-use App\Http\Controllers\EnrollMentController;
+use App\Http\Controllers\EnrollmentController;
 use App\Http\Controllers\StudentFeePaymentController;
 use App\Http\Controllers\StudentTransportAssignmentController;
 use App\Http\Controllers\StudentWarningController;
@@ -117,11 +117,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // --- CLASSROOM ROUTES ---
     Route::apiResource('/classrooms', ClassroomController::class); // <-- Add this
     // --- ENROLLMENT ROUTES ---
-    Route::apiResource('/enrollments', EnrollMentController::class);
-    Route::get('/enrollable-students', [EnrollMentController::class, 'getEnrollableStudents']);
-    Route::get('/enrollments/search', [EnrollMentController::class, 'search']);
-    Route::get('/unassigned-students-for-grade', [EnrollMentController::class, 'getUnassignedStudentsForGrade']);
-    Route::put('/enrollments/{enrollment}/assign-classroom', [EnrollMentController::class, 'assignToClassroom']);
+    Route::apiResource('/enrollments', EnrollmentController::class);
+    Route::get('/enrollable-students', [EnrollmentController::class, 'getEnrollableStudents']);
+    Route::get('/enrollments/search', [EnrollmentController::class, 'search']);
+    Route::get('/unassigned-students-for-grade', [EnrollmentController::class, 'getUnassignedStudentsForGrade']);
+    Route::put('/enrollments/{enrollment}/assign-classroom', [EnrollmentController::class, 'assignToClassroom']);
 
     // --- STUDENT FEE PAYMENT ROUTES ---
     Route::apiResource('/student-fee-payments', StudentFeePaymentController::class);

@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\EnrollMent;
+use App\Models\Enrollment;
 use App\Models\Student;
 use App\Models\StudentLedger;
 use Illuminate\Http\Request;
@@ -11,7 +11,7 @@ use App\Models\StudentTransportAssignment;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
-class EnrollMentController extends Controller
+class EnrollmentController extends Controller
 {
     /**
      * Display a listing of the resource based on filters.
@@ -31,7 +31,7 @@ class EnrollMentController extends Controller
             }
     
             // Build query with proper table references
-            $query = EnrollMent::with([
+            $query = Enrollment::with([
                 'student', // Select only needed student columns
                 'gradeLevel', // Select only needed grade columns
                 'classroom', // Select only needed classroom columns
@@ -60,7 +60,7 @@ class EnrollMentController extends Controller
     }
 
     public function getAllEnrollments(){
-        return EnrollMent::all();
+        return Enrollment::all();
     }
 
     /**
@@ -82,7 +82,7 @@ class EnrollMentController extends Controller
         $schoolId = $request->input('school_id');
 
         // Get IDs of students already enrolled in this year
-        $enrolledStudentIds = EnrollMent::where('academic_year', $academicYear)
+        $enrolledStudentIds = Enrollment::where('academic_year', $academicYear)
             ->pluck('student_id');
 
         // Get students who are NOT in that list.
@@ -147,7 +147,7 @@ class EnrollMentController extends Controller
             }
         }
 
-        $enrollment = EnrollMent::create($validatedData);
+        $enrollment = Enrollment::create($validatedData);
 
         // Automatically create student ledger entry for fees
         if ($enrollment->fees > 0) {
@@ -416,7 +416,7 @@ class EnrollMentController extends Controller
         })->pluck('student_academic_year_id');
 
         // Get Enrollment records for the selected school and year that are NOT in the assigned list
-        $assignableEnrollments = EnrollMent::with('student:id,student_name,goverment_id')
+        $assignableEnrollments = Enrollment::with('student:id,student_name,goverment_id')
             ->where('academic_year', $academicYear)
             ->where('school_id', $schoolId)
             ->whereNotIn('id', $assignedEnrollmentIds)
@@ -452,7 +452,7 @@ class EnrollMentController extends Controller
 
         $searchTerm = $request->input('term');
 
-        $query = EnrollMent::with([
+        $query = Enrollment::with([
             'student',
             'gradeLevel',
             'classroom',
@@ -493,7 +493,7 @@ class EnrollMentController extends Controller
             return response()->json(['message' => 'School, Year, and Grade Level are required', 'errors' => $validator->errors()], 422);
         }
 
-        $unassignedEnrollments = EnrollMent::with([
+        $unassignedEnrollments = Enrollment::with([
                 'student:id,student_name,goverment_id,image',
                 'gradeLevel:id,name',
             ])
@@ -539,7 +539,7 @@ class EnrollMentController extends Controller
         if ($classroomId) {
             $classroom = \App\Models\Classroom::find($classroomId);
             if ($classroom) {
-                $currentOccupancy = EnrollMent::where('classroom_id', $classroomId)
+                $currentOccupancy = Enrollment::where('classroom_id', $classroomId)
                                     ->where('academic_year', $enrollment->academic_year)
                                     ->where('status', 'active')
                                     ->count();

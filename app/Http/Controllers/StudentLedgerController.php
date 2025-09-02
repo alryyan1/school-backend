@@ -24,7 +24,7 @@ class StudentLedgerController extends Controller
             'end_date' => 'nullable|date|after_or_equal:start_date',
         ]);
 
-        $enrollment = Enrollment::with(['student', 'classroom.gradeLevel', 'classroom.school'])
+        $enrollment = Enrollment::with(['student', 'school', 'gradeLevel', 'classroom'])
             ->findOrFail($enrollmentId);
 
         $query = StudentLedger::where('enrollment_id', $enrollmentId)

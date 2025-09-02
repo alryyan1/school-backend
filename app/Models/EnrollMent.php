@@ -45,7 +45,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * @method static \Illuminate\Database\Eloquent\Builder|Enrollment whereUpdatedAt($value)
  * @mixin \Eloquent
  */
-class EnrollMent extends Model
+class Enrollment extends Model
 {
     use HasFactory;
 
