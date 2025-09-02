@@ -41,7 +41,6 @@ class SchoolController extends Controller
             'code' => 'required|string|max:50|unique:schools,code',
             'address' => 'required|string|max:255',
             'phone' => 'required|string|max:20',
-            'email' => 'string',
             'principal_name' => 'nullable|string|max:255',
             'establishment_date' => 'nullable|date_format:Y-m-d',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // Logo validation
@@ -96,7 +95,6 @@ class SchoolController extends Controller
             'code' => ['sometimes', 'required', 'string', 'max:50', Rule::unique('schools')->ignore($school->id)],
             'address' => 'sometimes|required|string|max:255',
             'phone' => 'sometimes|required|string|max:20',
-            'email' => ['sometimes', 'required', 'email', 'max:255', Rule::unique('schools')->ignore($school->id)],
             'principal_name' => 'nullable|string|max:255',
             'establishment_date' => 'nullable|date_format:Y-m-d',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // Validate new logo

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\EnrollMent;
 use App\Models\Student;
+use App\Models\StudentLedger;
 use Illuminate\Http\Request;
 use App\Http\Resources\EnrollmentResource;
 use App\Models\StudentTransportAssignment;
@@ -134,7 +135,74 @@ class EnrollMentController extends Controller
             return response()->json(['message' => 'خطأ في التحقق', 'errors' => $validator->errors()], 422);
         }
 
-        $enrollment = EnrollMent::create($validator->validated());
+        $validatedData = $validator->validated();
+        
+        // Auto-fill fees from school's annual_fees if not provided
+        if (!isset($validatedData['fees']) || $validatedData['fees'] === 0) {
+            $school = \App\Models\School::find($request->school_id);
+            if ($school && $school->annual_fees) {
+                $validatedData['fees'] = $school->annual_fees;
+            } else {
+                $validatedData['fees'] = 0; // Default to 0 if school has no annual fees
+            }
+        }
+
+        $enrollment = EnrollMent::create($validatedData);
+
+        // Automatically create student ledger entry for fees
+        if ($enrollment->fees > 0) {
+            try {
+                \App\Models\StudentLedger::addEntry([
+                    'enrollment_id' => $enrollment->id,
+                    'student_id' => $enrollment->student_id,
+                    'transaction_type' => 'fee',
+                    'description' => 'رسوم التسجيل السنوية - ' . $enrollment->academic_year,
+                    'amount' => $enrollment->fees,
+                    'transaction_date' => now()->format('Y-m-d'),
+                    'reference_number' => 'ENR-' . $enrollment->id,
+                    'metadata' => [
+                        'enrollment_id' => $enrollment->id,
+                        'academic_year' => $enrollment->academic_year,
+                        'grade_level_id' => $enrollment->grade_level_id,
+                        'school_id' => $enrollment->school_id,
+                        'auto_created' => true
+                    ],
+                    'created_by' => auth()->id(),
+                ]);
+            } catch (\Exception $e) {
+                // Log the error but don't fail the enrollment creation
+                \Log::error('Failed to create automatic student ledger entry for enrollment ' . $enrollment->id . ': ' . $e->getMessage());
+            }
+        }
+
+        // Automatically create student ledger entry for discount if applied
+        if ($enrollment->discount > 0) {
+            try {
+                $discountAmount = ($enrollment->fees * $enrollment->discount) / 100;
+                \App\Models\StudentLedger::addEntry([
+                    'enrollment_id' => $enrollment->id,
+                    'student_id' => $enrollment->student_id,
+                    'transaction_type' => 'discount',
+                    'description' => 'خصم على رسوم التسجيل - ' . $enrollment->discount . '% - ' . $enrollment->academic_year,
+                    'amount' => $discountAmount,
+                    'transaction_date' => now()->format('Y-m-d'),
+                    'reference_number' => 'ENR-DISC-' . $enrollment->id,
+                    'metadata' => [
+                        'enrollment_id' => $enrollment->id,
+                        'academic_year' => $enrollment->academic_year,
+                        'grade_level_id' => $enrollment->grade_level_id,
+                        'school_id' => $enrollment->school_id,
+                        'discount_percentage' => $enrollment->discount,
+                        'discount_amount' => $discountAmount,
+                        'auto_created' => true
+                    ],
+                    'created_by' => auth()->id(),
+                ]);
+            } catch (\Exception $e) {
+                // Log the error but don't fail the enrollment creation
+                \Log::error('Failed to create automatic student ledger entry for discount ' . $enrollment->id . ': ' . $e->getMessage());
+            }
+        }
 
         return new EnrollmentResource($enrollment->load(['student', 'gradeLevel', 'classroom', 'school']));
     }
@@ -163,7 +231,7 @@ class EnrollMentController extends Controller
                 Rule::exists('classrooms', 'id')->where(function ($query) use ($enrollment) {
                     // Ensure new classroom belongs to the correct school and grade
                     $query->where('school_id', $enrollment->school_id)
-                        ->where('grade_level_id', $enrollment->grade_level_id);
+                          ->where('grade_level_id', $enrollment->grade_level_id);
                 }),
             ],
             'discount' => ['sometimes','nullable','integer','in:0,5,10,15,20,25,30,40,50'],
@@ -177,7 +245,143 @@ class EnrollMentController extends Controller
             return response()->json(['message' => 'خطأ في التحقق', 'errors' => $validator->errors()], 422);
         }
 
-        $enrollment->update($validator->validated());
+        $validatedData = $validator->validated();
+        
+        // Auto-fill fees from school's annual_fees if fees are being updated and not provided
+        if (isset($validatedData['fees']) && ($validatedData['fees'] === null || $validatedData['fees'] === 0)) {
+            $school = \App\Models\School::find($enrollment->school_id);
+            if ($school && $school->annual_fees) {
+                $validatedData['fees'] = $school->annual_fees;
+            } else {
+                $validatedData['fees'] = 0; // Default to 0 if school has no annual fees
+            }
+        }
+
+        // Check if fees were changed and create appropriate ledger entries
+        $oldFees = $enrollment->fees;
+        $newFees = $validatedData['fees'] ?? $oldFees;
+        
+        $enrollment->update($validatedData);
+        
+        // If fees changed, create ledger entries
+        if ($oldFees !== $newFees && $newFees > 0) {
+            try {
+                // If fees increased, add a fee entry
+                if ($newFees > $oldFees) {
+                    $feeIncrease = $newFees - $oldFees;
+                    \App\Models\StudentLedger::addEntry([
+                        'enrollment_id' => $enrollment->id,
+                        'student_id' => $enrollment->student_id,
+                        'transaction_type' => 'fee',
+                        'description' => 'تحديث رسوم التسجيل - ' . $enrollment->academic_year,
+                        'amount' => $feeIncrease,
+                        'transaction_date' => now()->format('Y-m-d'),
+                        'reference_number' => 'ENR-UPDATE-' . $enrollment->id,
+                        'metadata' => [
+                            'enrollment_id' => $enrollment->id,
+                            'academic_year' => $enrollment->academic_year,
+                            'grade_level_id' => $enrollment->grade_level_id,
+                            'school_id' => $enrollment->school_id,
+                            'old_fees' => $oldFees,
+                            'new_fees' => $newFees,
+                            'fee_change' => $feeIncrease,
+                            'auto_created' => true,
+                            'change_type' => 'fee_update'
+                        ],
+                        'created_by' => auth()->id(),
+                    ]);
+                }
+                // If fees decreased, add an adjustment entry (negative amount)
+                else if ($newFees < $oldFees) {
+                    $feeDecrease = $oldFees - $newFees;
+                    \App\Models\StudentLedger::addEntry([
+                        'enrollment_id' => $enrollment->id,
+                        'student_id' => $enrollment->student_id,
+                        'transaction_type' => 'adjustment',
+                        'description' => 'تخفيض رسوم التسجيل - ' . $enrollment->academic_year,
+                        'amount' => -$feeDecrease, // Negative amount for fee reduction
+                        'transaction_date' => now()->format('Y-m-d'),
+                        'reference_number' => 'ENR-ADJUST-' . $enrollment->id,
+                        'metadata' => [
+                            'enrollment_id' => $enrollment->id,
+                            'academic_year' => $enrollment->academic_year,
+                            'grade_level_id' => $enrollment->grade_level_id,
+                            'school_id' => $enrollment->school_id,
+                            'old_fees' => $oldFees,
+                            'new_fees' => $newFees,
+                            'fee_change' => -$feeDecrease,
+                            'auto_created' => true,
+                            'change_type' => 'fee_reduction'
+                        ],
+                        'created_by' => auth()->id(),
+                    ]);
+                }
+            } catch (\Exception $e) {
+                // Log the error but don't fail the enrollment update
+                \Log::error('Failed to create automatic student ledger entry for enrollment fee update ' . $enrollment->id . ': ' . $e->getMessage());
+            }
+        }
+
+        // Check if discount changed and create appropriate ledger entries
+        $oldDiscount = $enrollment->discount;
+        $newDiscount = $validatedData['discount'] ?? $oldDiscount;
+        
+        if ($oldDiscount !== $newDiscount) {
+            try {
+                if ($oldDiscount > 0) {
+                    // Remove old discount entry by adding a negative adjustment
+                    $oldDiscountAmount = ($enrollment->fees * $oldDiscount) / 100;
+                    \App\Models\StudentLedger::addEntry([
+                        'enrollment_id' => $enrollment->id,
+                        'student_id' => $enrollment->student_id,
+                        'transaction_type' => 'adjustment',
+                        'description' => 'إلغاء الخصم السابق - ' . $oldDiscount . '% - ' . $enrollment->academic_year,
+                        'amount' => -$oldDiscountAmount, // Negative to reverse the discount
+                        'transaction_date' => now()->format('Y-m-d'),
+                        'reference_number' => 'ENR-DISC-CANCEL-' . $enrollment->id,
+                        'metadata' => [
+                            'enrollment_id' => $enrollment->id,
+                            'academic_year' => $enrollment->academic_year,
+                            'grade_level_id' => $enrollment->grade_level_id,
+                            'school_id' => $enrollment->school_id,
+                            'old_discount_percentage' => $oldDiscount,
+                            'old_discount_amount' => $oldDiscountAmount,
+                            'auto_created' => true,
+                            'change_type' => 'discount_cancellation'
+                        ],
+                        'created_by' => auth()->id(),
+                    ]);
+                }
+                
+                if ($newDiscount > 0) {
+                    // Add new discount entry
+                    $newDiscountAmount = ($enrollment->fees * $newDiscount) / 100;
+                    \App\Models\StudentLedger::addEntry([
+                        'enrollment_id' => $enrollment->id,
+                        'student_id' => $enrollment->student_id,
+                        'transaction_type' => 'discount',
+                        'description' => 'تطبيق خصم جديد - ' . $newDiscount . '% - ' . $enrollment->academic_year,
+                        'amount' => $newDiscountAmount,
+                        'transaction_date' => now()->format('Y-m-d'),
+                        'reference_number' => 'ENR-DISC-NEW-' . $enrollment->id,
+                        'metadata' => [
+                            'enrollment_id' => $enrollment->id,
+                            'academic_year' => $enrollment->academic_year,
+                            'grade_level_id' => $enrollment->grade_level_id,
+                            'school_id' => $enrollment->school_id,
+                            'new_discount_percentage' => $newDiscount,
+                            'new_discount_amount' => $newDiscountAmount,
+                            'auto_created' => true,
+                            'change_type' => 'discount_application'
+                        ],
+                        'created_by' => auth()->id(),
+                    ]);
+                }
+            } catch (\Exception $e) {
+                // Log the error but don't fail the enrollment update
+                \Log::error('Failed to create automatic student ledger entry for enrollment discount update ' . $enrollment->id . ': ' . $e->getMessage());
+            }
+        }
 
         return new EnrollmentResource($enrollment->fresh()->load(['student', 'gradeLevel', 'classroom', 'school']));
     }

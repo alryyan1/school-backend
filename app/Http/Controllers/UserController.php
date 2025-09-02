@@ -42,7 +42,7 @@ class UserController extends Controller
             'spatie_roles' => ['sometimes','array'],
             'spatie_roles.*' => ['string', Rule::exists('roles','name')],
             'phone' => 'nullable|string|max:20',
-            'gender' => ['nullable', Rule::in(['male', 'female', 'ذكر', 'انثي'])], // Allow multiple gender values from different sources
+            'school_id' => ['required','integer', Rule::exists('schools','id')],
         ]);
 
         if ($validator->fails()) {
@@ -57,7 +57,7 @@ class UserController extends Controller
             'email' => $validatedData['email'],
             'password' => Hash::make($validatedData['password']),
             'phone' => $validatedData['phone'] ?? null,
-            'gender' => $validatedData['gender'] ?? null,
+            'school_id' => $validatedData['school_id'],
         ]);
 
         // Assign Spatie roles if provided, else fallback to single role
@@ -96,7 +96,7 @@ class UserController extends Controller
             'spatie_roles' => ['sometimes','array'],
             'spatie_roles.*' => ['string', Rule::exists('roles','name')],
             'phone' => 'nullable|string|max:20',
-            'gender' => ['nullable', Rule::in(['male', 'female', 'ذكر', 'انثي'])],
+            'school_id' => ['sometimes','required','integer', Rule::exists('schools','id')],
             // DO NOT validate password here
         ]);
 

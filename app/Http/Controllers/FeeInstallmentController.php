@@ -68,20 +68,20 @@ class FeeInstallmentController extends Controller
     public function index(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'student_id' => 'required|integer|exists:students,id',
+            'enrollment_id' => 'required|integer|exists:enrollments,id',
         ]);
         if ($validator->fails()) return response()->json(['message' => 'Enrollment ID required', 'errors' => $validator->errors()], 422);
         $installments = FeeInstallment::with([ /* --- ADD EAGER LOADING HERE AS IN getDueSoon --- */
-            'student',
+            'enrollment.student',
         ])
-            ->where('student_id', $request->input('student_id'))
+            ->where('enrollment_id', $request->input('enrollment_id'))
             ->orderBy('due_date')->get();
         return FeeInstallmentResource::collection($installments);
     }
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'student_id' => 'required|integer|exists:students,id',
+            'enrollment_id' => 'required|integer|exists:enrollments,id',
             'title' => 'required|string|max:255',
             'amount_due' => 'required|numeric|min:0.01',
             'due_date' => 'required|date_format:Y-m-d',
@@ -95,7 +95,7 @@ class FeeInstallmentController extends Controller
         $installment = FeeInstallment::create($data);
         return new FeeInstallmentResource(
             $installment->load([ /* --- ADD EAGER LOADING HERE AS IN getDueSoon --- */
-                'student',
+                'enrollment.student',
             ])
         );
     }
@@ -214,7 +214,7 @@ class FeeInstallmentController extends Controller
             }
 
             $installmentsToCreate[] = [
-                'student_id' => $enrollment->student_id,
+                'enrollment_id' => $enrollment->id,
                 'title' => $title,
                 'amount_due' => $installmentAmount,
                 'amount_paid' => 0.00, // Start unpaid

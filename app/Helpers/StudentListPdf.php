@@ -12,22 +12,29 @@ class StudentListPdf extends TCPDF {
 
     // Page header
     public function Header() {
-        $this->SetFont('dejavusans', 'B', 12); // Use a font supporting Arabic
+        // Draw logo from public/logo.png if available
+        $logoPath = function_exists('public_path') ? public_path('logo.png') : null;
+        if ($logoPath && @file_exists($logoPath)) {
+            // x, y, width (auto height), type auto-detected
+            // Place near top-right because document is RTL; adjust margins if needed
+            $this->Image($logoPath, 60, 5, 60,60,);
+        }
+
+        $this->SetFont('arial', 'B', 12); // Use a font supporting Arabic
         $this->Cell(0, 9, $this->reportTitle, 0, true, 'C', 0, '', 0, false, 'M', 'M');
         if (!empty($this->filterInfo)) {
-             $this->SetFont('dejavusans', '', 9);
+             $this->SetFont('arial', '', 9);
              $this->Cell(0, 6, $this->filterInfo, 0, true, 'C', 0, '', 0, false, 'M', 'M');
         }
-        $this->Ln(4);
         // Draw a line under the header
-        $this->Line($this->GetX(), $this->GetY(), $this->getPageWidth() - $this->getMargins()['right'], $this->GetY());
-        $this->Ln(1);
+        // $this->Line($this->GetX(), $this->GetY(), $this->getPageWidth() - $this->getMargins()['right'], $this->GetY());
+        $this->Ln(10);
     }
 
     // Page footer
     public function Footer() {
         $this->SetY(-15);
-        $this->SetFont('dejavusans', 'I', 8);
+        $this->SetFont('arial', 'I', 8);
         $this->Cell(0, 10, 'تاريخ الطباعة: ' . Carbon::now()->format('Y/m/d H:i'), 0, false, 'L', 0, '', 0, false, 'T', 'M');
         $this->Cell(0, 10, 'صفحة '.$this->getAliasNumPage().'/'.$this->getAliasNbPages(), 0, false, 'R', 0, '', 0, false, 'T', 'M');
     }

@@ -48,6 +48,10 @@ Route::apiResource('users', UserController::class);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [UserController::class, 'store']);
 
+// Test route to verify API is working
+Route::get('/test', function () {
+    return response()->json(['message' => 'API is working!', 'timestamp' => now()]);
+});
 
 Route::post('/logout', function (Request $request) {
     $token = $request->user()?->currentAccessToken();
@@ -74,8 +78,9 @@ Route::get('/dashboard-stats', function () {
 
 
 Route::middleware('auth:sanctum')->get('/auth/verify', [VerificationController::class, 'verify']);
-// Publicly accessible API routes (auth removed)
-{
+
+// Protected API routes (require authentication)
+Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('/students', StudentController::class);
     Route::get('/students/search/{id}', [StudentController::class, 'searchById'])->name('students.searchById');
     Route::post('/students/{student}/accept', [StudentController::class, 'accept'])->name('students.accept');
@@ -120,6 +125,15 @@ Route::middleware('auth:sanctum')->get('/auth/verify', [VerificationController::
 
     // --- STUDENT FEE PAYMENT ROUTES ---
     Route::apiResource('/student-fee-payments', StudentFeePaymentController::class);
+    
+    // --- STUDENT LEDGER ROUTES ---
+    Route::prefix('student-ledgers')->group(function () {
+        Route::get('/enrollment/{enrollmentId}', [\App\Http\Controllers\StudentLedgerController::class, 'show']);
+        Route::post('/', [\App\Http\Controllers\StudentLedgerController::class, 'store']);
+        Route::post('/summary', [\App\Http\Controllers\StudentLedgerController::class, 'summary']);
+        Route::get('/student/{studentId}', [\App\Http\Controllers\StudentLedgerController::class, 'studentLedger']);
+    });
+    
     // --- FEE INSTALLMENT ROUTES ---
     Route::apiResource('/fee-installments', FeeInstallmentController::class); // <-- Add this
     // --- Route to get installments due soon ---
@@ -181,4 +195,4 @@ Route::middleware('auth:sanctum')->get('/auth/verify', [VerificationController::
     Route::get('student-warnings/{studentWarning}/pdf', [StudentWarningController::class, 'generatePdf'])->name('student-warnings.pdf');
     // --- Student Absences ---
     Route::apiResource('student-absences', StudentAbsenceController::class)->only(['index','store','update','destroy']);
-}
+});

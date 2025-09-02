@@ -19,7 +19,6 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $code
  * @property string $address
  * @property string $phone
- * @property string $email
  * @property string|null $principal_name
  * @property \Illuminate\Support\Carbon|null $establishment_date
  * @property string|null $logo
@@ -53,7 +52,6 @@ class School extends Model
         'code', // School ID
         'address',
         'phone',
-        'email',
         'principal_name',
         'establishment_date',
         'logo', // Path to logo file

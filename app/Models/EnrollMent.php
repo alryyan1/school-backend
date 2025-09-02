@@ -97,8 +97,8 @@ class EnrollMent extends Model
     }
 
     public function feeInstallments(): HasMany {
-                                return $this->hasMany(FeeInstallment::class, 'student_id', 'student_id')->orderBy('due_date'); // Order by due date
-        }
+        return $this->hasMany(FeeInstallment::class, 'enrollment_id', 'id')->orderBy('due_date'); // Order by due date
+    }
 
         public function notes(): HasMany
         {

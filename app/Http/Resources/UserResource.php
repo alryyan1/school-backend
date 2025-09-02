@@ -20,7 +20,7 @@ class UserResource extends JsonResource
             'username' => $this->username,
             'email' => $this->email,
             'phone' => $this->phone,
-            'gender' => $this->gender,
+            'school_id' => $this->school_id,
             'email_verified_at' => $this->email_verified_at ? $this->email_verified_at->toIso8601String() : null,
 
             //null safe

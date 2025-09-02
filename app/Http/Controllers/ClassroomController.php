@@ -40,16 +40,20 @@ class ClassroomController extends Controller
     public function index(Request $request) {
         $validator = Validator::make($request->all(), [
             'school_id' => 'required|integer|exists:schools,id',
-            'grade_level_id' => 'required|integer|exists:grade_levels,id',
+            'grade_level_id' => 'nullable|integer|exists:grade_levels,id',
         ]);
-        if ($validator->fails()) return response()->json(['message'=>'School and Grade are required', 'errors'=>$validator->errors()], 422);
+        if ($validator->fails()) return response()->json(['message'=>'School is required', 'errors'=>$validator->errors()], 422);
 
         $schoolId = $request->input('school_id');
         $gradeLevelId = $request->input('grade_level_id');
 
         $query = Classroom::with(['gradeLevel:id,name'])
-            ->where('school_id', $schoolId)
-            ->where('grade_level_id', $gradeLevelId);
+            ->where('school_id', $schoolId);
+
+        // Only filter by grade level if it's provided
+        if ($gradeLevelId) {
+            $query->where('grade_level_id', $gradeLevelId);
+        }
 
         $classrooms = $query->orderBy('name')->get();
         return ClassroomResource::collection($classrooms);

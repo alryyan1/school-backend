@@ -63,7 +63,7 @@ class GradeLevel extends Model
      */
     public function enrollments(): HasMany
     {
-        return $this->hasMany(Enrollment::class); // Assumes Enrollment model exists
+        return $this->hasMany(EnrollMent::class); // Assumes EnrollMent model exists
     }
 
     // In app/Models/GradeLevel.php

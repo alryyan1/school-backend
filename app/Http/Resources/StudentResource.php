@@ -105,12 +105,7 @@ class StudentResource extends JsonResource
                             'id' => $enrollment->gradeLevel->id,
                             'name' => $enrollment->gradeLevel->name,
                         ] : null,
-                        'academic_year' => $enrollment->academicYear ? [
-                            'id' => $enrollment->academicYear->id,
-                            'name' => $enrollment->academicYear->name,
-                            'start_date' => optional($enrollment->academicYear->start_date)->format('Y-m-d'),
-                            'end_date' => optional($enrollment->academicYear->end_date)->format('Y-m-d'),
-                        ] : null,
+                        'academic_year' => $enrollment->academic_year,
                         'classroom' => $enrollment->classroom ? [
                             'id' => $enrollment->classroom->id,
                             'name' => $enrollment->classroom->name,
@@ -127,9 +122,8 @@ class StudentResource extends JsonResource
             // Shortcut fields for the latest academic year totals
             'latest_academic_year_totals' => $this->whenLoaded('enrollments', function () {
                 $latest = $this->enrollments->sortByDesc(function ($enrollment) {
-                    // Prefer academic year end_date, fallback to created_at
-                    $end = optional($enrollment->academicYear?->end_date);
-                    return $end?->timestamp ?? $enrollment->created_at?->timestamp ?? 0;
+                    // Sort by created_at since academic_year is a string
+                    return $enrollment->created_at?->timestamp ?? 0;
                 })->first();
 
                 if (!$latest) {
@@ -139,12 +133,7 @@ class StudentResource extends JsonResource
                 return [
                     'student_academic_year_id' => $latest->id,
                     'enrollment_type' => $latest->enrollment_type,
-                    'academic_year' => [
-                        'id' => $latest->academicYear?->id,
-                        'name' => $latest->academicYear?->name,
-                        'start_date' => optional($latest->academicYear?->start_date)->format('Y-m-d'),
-                        'end_date' => optional($latest->academicYear?->end_date)->format('Y-m-d'),
-                    ],
+                    'academic_year' => $latest->academic_year,
                     'total_amount_required' => (float) ($latest->feeInstallments?->sum('amount_due') ?? 0),
                     'total_amount_paid' => (float) ($latest->feeInstallments?->sum('amount_paid') ?? 0),
                 ];

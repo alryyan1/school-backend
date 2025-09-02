@@ -10,11 +10,33 @@ class PaymentMethod extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name'];
+    protected $fillable = [
+        'name',
+        'display_name',
+        'description',
+        'is_active',
+        'settings',
+    ];
 
-    public function payments(): HasMany
+    protected $casts = [
+        'is_active' => 'boolean',
+        'settings' => 'array',
+    ];
+
+    /**
+     * Get the payment transactions for this payment method.
+     */
+    public function paymentTransactions(): HasMany
     {
-        return $this->hasMany(StudentFeePayment::class);
+        return $this->hasMany(PaymentTransaction::class);
+    }
+
+    /**
+     * Scope to get only active payment methods.
+     */
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
     }
 }
 

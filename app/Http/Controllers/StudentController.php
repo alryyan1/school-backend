@@ -100,6 +100,27 @@ class StudentController extends Controller
             $query->where('approved', false);
         }
 
+        // School filter - filter by enrollment school
+        if ($request->filled('school_id')) {
+            $query->whereHas('enrollments', function ($q) use ($request) {
+                $q->where('school_id', $request->get('school_id'));
+            });
+        }
+
+        // Grade level filter - filter by enrollment grade level
+        if ($request->filled('grade_level_id')) {
+            $query->whereHas('enrollments', function ($q) use ($request) {
+                $q->where('grade_level_id', $request->get('grade_level_id'));
+            });
+        }
+
+        // Classroom filter - filter by enrollment classroom
+        if ($request->filled('classroom_id')) {
+            $query->whereHas('enrollments', function ($q) use ($request) {
+                $q->where('classroom_id', $request->get('classroom_id'));
+            });
+        }
+
         // Sorting
         $sortBy = $request->get('sort_by', 'id');
         $sortOrder = $request->get('sort_order', 'desc');
@@ -593,7 +614,7 @@ class StudentController extends Controller
         $pdf->SetAuthor(config('app.name'));
         $pdf->SetTitle('قائمة الطلاب');
         $pdf->SetSubject('قائمة ببيانات الطلاب المسجلين');
-        $pdf->SetMargins(10, 30, 10); // L, T, R (adjust top margin for header)
+        $pdf->SetMargins(10, 55, 10); // L, T, R (adjust top margin for header)
         $pdf->SetHeaderMargin(5);
         $pdf->SetFooterMargin(15);
         $pdf->SetAutoPageBreak(TRUE, 20);

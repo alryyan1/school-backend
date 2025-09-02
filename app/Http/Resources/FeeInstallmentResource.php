@@ -11,7 +11,7 @@ class FeeInstallmentResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'student_id' => $this->student_id,
+            'enrollment_id' => $this->enrollment_id,
             'title' => $this->title,
             'amount_due' => $this->amount_due,
             'amount_paid' => $this->amount_paid,
@@ -21,9 +21,9 @@ class FeeInstallmentResource extends JsonResource
             'created_at' => $this->created_at->toIso8601String(),
             'updated_at' => $this->updated_at->toIso8601String(),
       
-            // Use 'student_enrollment' as key for clarity in JSON,
-            // but load 'studentAcademicYear' relationship from the model
-            'student' => new StudentResource($this->whenLoaded('student')),            // ---------------------------
+            // Use 'enrollment' as key for clarity in JSON,
+            // but load 'enrollment' relationship from the model
+            'enrollment' => $this->whenLoaded('enrollment'),            // ---------------------------
 
             // Optional: You might already have payments loaded here if needed elsewhere
             // 'payments' => StudentFeePaymentResource::collection($this->whenLoaded('payments')),

@@ -24,7 +24,6 @@ class SchoolResource extends JsonResource
             'code' => $this->code,
             'address' => $this->address,
             'phone' => $this->phone,
-            'email' => $this->email,
             'classrooms_count'=>$this->whenCounted('classrooms'),
             'principal_name' => $this->principal_name,
             'establishment_date' => $this->establishment_date, // Formatted by $casts

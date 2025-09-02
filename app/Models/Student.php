@@ -100,13 +100,10 @@ class Student extends Model
 
     public function enrollments(): HasMany
     {
-        return $this->hasMany(Enrollment::class);
+        return $this->hasMany(EnrollMent::class);
     }
 
-    public function feeInstallments(): HasMany
-    {
-        return $this->hasMany(FeeInstallment::class);
-    }
+
 
     /**
      * Get the user who approved this student.
