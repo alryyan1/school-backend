@@ -23,7 +23,7 @@ class StudentAbsence extends Model
 
     public function enrollment()
     {
-        return $this->belongsTo(EnrollMent::class, 'student_academic_year_id');
+        return $this->belongsTo(Enrollment::class, 'student_academic_year_id');
     }
 }
 

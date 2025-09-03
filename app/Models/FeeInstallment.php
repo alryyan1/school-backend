@@ -15,7 +15,7 @@ class FeeInstallment extends Model
 
     public function enrollment(): BelongsTo
     {
-        return $this->belongsTo(EnrollMent::class);
+        return $this->belongsTo(Enrollment::class);
     }
 
     public function student(): BelongsTo

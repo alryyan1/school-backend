@@ -71,7 +71,7 @@ class EnrollmentLedgerTest extends TestCase
             'academic_year' => '2024/2025'
         ]);
 
-        $enrollment = EnrollMent::where('student_id', $this->student->id)->first();
+        $enrollment = Enrollment::where('student_id', $this->student->id)->first();
 
         // Check that a fee ledger entry was created
         $this->assertDatabaseHas('student_ledgers', [
@@ -105,7 +105,7 @@ class EnrollmentLedgerTest extends TestCase
 
         $response->assertStatus(201);
 
-        $enrollment = EnrollMent::where('student_id', $this->student->id)->first();
+        $enrollment = Enrollment::where('student_id', $this->student->id)->first();
 
         // Check that both fee and discount ledger entries were created
         $this->assertDatabaseHas('student_ledgers', [
@@ -129,7 +129,7 @@ class EnrollmentLedgerTest extends TestCase
         $this->markTestSkipped('Migration issues need to be resolved first');
         
         // Create enrollment first
-        $enrollment = EnrollMent::create([
+        $enrollment = Enrollment::create([
             'student_id' => $this->student->id,
             'school_id' => $this->school->id,
             'academic_year' => '2024/2025',
@@ -164,7 +164,7 @@ class EnrollmentLedgerTest extends TestCase
         $this->markTestSkipped('Migration issues need to be resolved first');
         
         // Create enrollment first
-        $enrollment = EnrollMent::create([
+        $enrollment = Enrollment::create([
             'student_id' => $this->student->id,
             'school_id' => $this->school->id,
             'academic_year' => '2024/2025',
@@ -219,7 +219,7 @@ class EnrollmentLedgerTest extends TestCase
 
         $response->assertStatus(201);
 
-        $enrollment = EnrollMent::where('student_id', $this->student->id)->first();
+        $enrollment = Enrollment::where('student_id', $this->student->id)->first();
 
         // Check that fees were auto-filled from school
         $this->assertEquals(1000, $enrollment->fees);

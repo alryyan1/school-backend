@@ -31,7 +31,7 @@ class ExamResult extends Model
      */
     public function studentAcademicYear(): BelongsTo
     {
-        return $this->belongsTo(EnrollMent::class, 'student_academic_year_id');
+        return $this->belongsTo(Enrollment::class, 'student_academic_year_id');
     }
 
     /**
