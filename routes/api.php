@@ -127,12 +127,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('/student-fee-payments', StudentFeePaymentController::class);
     
     // --- STUDENT LEDGER ROUTES ---
-    Route::prefix('student-ledgers')->group(function () {
-        Route::get('/enrollment/{enrollmentId}', [\App\Http\Controllers\StudentLedgerController::class, 'show']);
-        Route::post('/', [\App\Http\Controllers\StudentLedgerController::class, 'store']);
-        Route::post('/summary', [\App\Http\Controllers\StudentLedgerController::class, 'summary']);
-        Route::get('/student/{studentId}', [\App\Http\Controllers\StudentLedgerController::class, 'studentLedger']);
-    });
+Route::prefix('student-ledgers')->group(function () {
+    Route::get('/enrollment/{enrollmentId}', [\App\Http\Controllers\StudentLedgerController::class, 'show']);
+    Route::post('/', [\App\Http\Controllers\StudentLedgerController::class, 'store']);
+    Route::post('/summary', [\App\Http\Controllers\StudentLedgerController::class, 'summary']);
+    Route::get('/student/{studentId}', [\App\Http\Controllers\StudentLedgerController::class, 'studentLedger']);
+});
     
     // --- FEE INSTALLMENT ROUTES ---
     Route::apiResource('/fee-installments', FeeInstallmentController::class); // <-- Add this

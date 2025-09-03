@@ -6,6 +6,7 @@ use App\Models\StudentLedger;
 use App\Models\Enrollment;
 use App\Models\Student;
 use App\Http\Resources\StudentLedgerResource;
+use App\Helpers\StudentLedgerPdf;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -189,5 +190,49 @@ class StudentLedgerController extends Controller
                 'total' => $ledgerEntries->total(),
             ]
         ]);
+    }
+
+    /**
+     * Generate PDF for student ledger.
+     */
+    public function generatePdf(Request $request, $enrollmentId)
+    {
+        $enrollment = Enrollment::with(['student', 'school', 'gradeLevel', 'classroom'])
+            ->findOrFail($enrollmentId);
+
+        $query = StudentLedger::where('enrollment_id', $enrollmentId)
+            ->with(['createdBy'])
+            ->orderBy('transaction_date', 'desc')
+            ->orderBy('id', 'desc');
+
+        if ($request->start_date) {
+            $query->where('transaction_date', '>=', $request->start_date);
+        }
+
+        if ($request->end_date) {
+            $query->where('transaction_date', '<=', $request->end_date);
+        }
+
+        $ledgerEntries = $query->get();
+        $currentBalance = StudentLedger::getCurrentBalance($enrollmentId);
+
+        $summary = [
+            'total_fees' => $ledgerEntries->where('transaction_type', 'fee')->sum('amount'),
+            'total_payments' => $ledgerEntries->where('transaction_type', 'payment')->sum('amount'),
+            'total_discounts' => $ledgerEntries->where('transaction_type', 'discount')->sum('amount'),
+            'total_refunds' => $ledgerEntries->where('transaction_type', 'refund')->sum('amount'),
+            'total_adjustments' => $ledgerEntries->where('transaction_type', 'adjustment')->sum('amount'),
+        ];
+
+        // Create PDF
+        $pdf = new StudentLedgerPdf($enrollment, $ledgerEntries, $summary, $currentBalance);
+        $pdf->generateLedger();
+
+        // Generate filename
+        $filename = 'student_ledger_' . ($enrollment->student->student_name ?? 'unknown') . '_' . date('Y-m-d') . '.pdf';
+        $filename = preg_replace('/[^a-zA-Z0-9_-]/', '_', $filename);
+
+        // Output PDF
+        $pdf->Output($filename, 'I');
     }
 }
