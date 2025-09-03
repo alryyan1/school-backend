@@ -39,7 +39,7 @@ Route::get('/enrollments/{enrollment}/fee-statement-pdf', [FeeInstallmentControl
 
     // --- Student Warning Notice PDF (web route for direct access) ---
     Route::get('/student-warnings/{studentWarning}/pdf', [StudentWarningController::class, 'generatePdf'])
-         ->name('student-warnings.pdf');
+         ->name('student-warnings.web.pdf');
 
     // --- Student Ledger PDF (web route for direct access) ---
     Route::get('/student-ledgers/enrollment/{enrollmentId}/pdf', [\App\Http\Controllers\StudentLedgerController::class, 'generatePdf'])

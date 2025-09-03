@@ -161,21 +161,15 @@ Route::prefix('student-ledgers')->group(function () {
      ->name('notify.installment.whatsapp');
 
 
-     Route::apiResource('/student-fee-payments', StudentFeePaymentController::class);
      Route::apiResource('/payment-methods', \App\Http\Controllers\PaymentMethodController::class)->only(['index','store']);
-     Route::apiResource('/exams', ExamController::class);
  
      // --- ROLE ROUTE ---
      Route::get('/roles', [RoleController::class, 'index'])->name('roles.index'); // Get all roles
  
      // --- USER MANAGEMENT ROUTES ---
-     Route::put('/users/{user}/password', [UserController::class, 'updatePassword'])->name('users.updatePassword');
      Route::get('/curriculum/subjects-for-grade', [AcademicYearSubjectController::class, 'getSubjectsForGradeLevel'])->name('curriculum.subjectsForGrade');
 
-     Route::apiResource('users', UserController::class);
      Route::post('/exams/{exam}/quick-add-schedules', [ExamScheduleController::class, 'quickAddSchedulesForGrade'])->name('exams.schedules.quickAdd'); // <-- New Route
-     Route::apiResource('/exam-schedules', ExamScheduleController::class);
-     Route::apiResource('/exam-schedules', ExamScheduleController::class);
      // --- EXAM RESULT ROUTES ---
      Route::get('/students/{student}/relevant-exams', [ExamController::class, 'getRelevantExamsForStudent'])->name('students.relevantExams');
      Route::get('/exam-schedules/{examSchedule}/results', [ExamResultController::class, 'getResultsForSchedule']);
@@ -192,7 +186,7 @@ Route::prefix('student-ledgers')->group(function () {
     Route::apiResource('student-notes', StudentNoteController::class)->only(['index', 'store', 'update', 'destroy']);
     // --- Student Warnings ---
     Route::apiResource('student-warnings', StudentWarningController::class)->only(['index','store','update','destroy']);
-    Route::get('student-warnings/{studentWarning}/pdf', [StudentWarningController::class, 'generatePdf'])->name('student-warnings.pdf');
+    Route::get('student-warnings/{studentWarning}/pdf', [StudentWarningController::class, 'generatePdf'])->name('student-warnings.api.pdf');
     // --- Student Absences ---
     Route::apiResource('student-absences', StudentAbsenceController::class)->only(['index','store','update','destroy']);
 });
