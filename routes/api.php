@@ -30,6 +30,7 @@ use App\Http\Controllers\RoleController;
 use App\Http\Controllers\StudentNoteController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\ExpenseCategoryController;
+use App\Http\Controllers\UltramsgController;
 
 /*
 |--------------------------------------------------------------------------
@@ -124,6 +125,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/enrollable-students', [EnrollmentController::class, 'getEnrollableStudents']);
     Route::get('/enrollments/search', [EnrollmentController::class, 'search']);
     Route::get('/unassigned-students-for-grade', [EnrollmentController::class, 'getUnassignedStudentsForGrade']);
+    Route::get('/assigned-students-for-grade', [EnrollmentController::class, 'getAssignedStudentsForGrade']);
     Route::put('/enrollments/{enrollment}/assign-classroom', [EnrollmentController::class, 'assignToClassroom']);
 
     // --- STUDENT FEE PAYMENT ROUTES ---
@@ -187,6 +189,7 @@ Route::prefix('student-ledgers')->group(function () {
     // --- End Role & Permission Routes ---
 
     Route::apiResource('student-notes', StudentNoteController::class)->only(['index', 'store', 'update', 'destroy']);
+    Route::get('student-notes/pdf', [StudentNoteController::class, 'generatePdf'])->name('student-notes.api.pdf');
     // --- Student Warnings ---
     Route::apiResource('student-warnings', StudentWarningController::class)->only(['index','store','update','destroy']);
     Route::get('student-warnings/{studentWarning}/pdf', [StudentWarningController::class, 'generatePdf'])->name('student-warnings.api.pdf');
@@ -200,4 +203,8 @@ Route::prefix('student-ledgers')->group(function () {
     // --- EXPENSE CATEGORY ROUTES ---
     Route::apiResource('expense-categories', ExpenseCategoryController::class);
     Route::get('expense-categories-active', [ExpenseCategoryController::class, 'active'])->name('expense-categories.active');
+
+    // --- WhatsApp (Ultramsg) ---
+    Route::post('/whatsapp/send-text', [UltramsgController::class, 'sendText'])->name('whatsapp.sendText');
+    Route::post('/whatsapp/send-document', [UltramsgController::class, 'sendDocument'])->name('whatsapp.sendDocument');
 });

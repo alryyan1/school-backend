@@ -30,6 +30,11 @@ return [
         'secret' => env('AWS_SECRET_ACCESS_KEY'),
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
+    'ultramsg' => [
+        'base_url' => env('ULTRAMSG_BASE_URL', 'https://api.ultramsg.com'),
+        'instance_id' => env('ULTRAMSG_INSTANCE_ID'),
+        'token' => env('ULTRAMSG_TOKEN'),
+    ],
     'waapi' => [
         'url' => env('WAAPI_URL'),
         'instance_id' => env('WAAPI_INSTANCE_ID'), // <-- Add Instance ID

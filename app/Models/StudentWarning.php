@@ -11,7 +11,7 @@ class StudentWarning extends Model
     use HasFactory;
 
     protected $fillable = [
-        'student_academic_year_id',
+        'enrollment_id',
         'issued_by_user_id',
         'severity',
         'reason',
@@ -22,9 +22,9 @@ class StudentWarning extends Model
         'issued_at' => 'datetime',
     ];
 
-    public function studentAcademicYear(): BelongsTo
+    public function enrollment(): BelongsTo
     {
-        return $this->belongsTo(EnrollMent::class);
+        return $this->belongsTo(Enrollment::class, 'enrollment_id');
     }
 
     public function issuedBy(): BelongsTo

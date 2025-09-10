@@ -11,7 +11,7 @@ class StudentWarningResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'student_academic_year_id' => $this->student_academic_year_id,
+            'enrollment_id' => $this->enrollment_id,
             'issued_by_user_id' => $this->issued_by_user_id,
             'severity' => $this->severity,
             'reason' => $this->reason,

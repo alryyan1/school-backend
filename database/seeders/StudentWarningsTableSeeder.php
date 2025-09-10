@@ -22,7 +22,7 @@ class StudentWarningsTableSeeder extends Seeder
             0 => 
             array (
                 'id' => 1,
-                'student_id' => 1,
+                'enrollment_id' => 1,
                 'issued_by_user_id' => 1,
                 'severity' => 'low',
                 'reason' => 'zeeee',

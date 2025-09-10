@@ -12,13 +12,13 @@ class StudentAbsenceController extends Controller
     public function index(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'student_academic_year_id' => 'required|integer|exists:student_academic_years,id',
+            'enrollment_id' => 'required|integer|exists:enrollments,id',
         ]);
         if ($validator->fails()) {
             return response()->json(['message' => 'Validation error', 'errors' => $validator->errors()], 422);
         }
 
-        $absences = StudentAbsence::where('student_academic_year_id', $request->integer('student_academic_year_id'))
+        $absences = StudentAbsence::where('enrollment_id', $request->integer('enrollment_id'))
             ->orderByDesc('absent_date')
             ->orderByDesc('created_at')
             ->get();
@@ -31,7 +31,7 @@ class StudentAbsenceController extends Controller
         // Adjust permission if you have a specific one
         abort_unless(auth()->check(), 403);
         $validator = Validator::make($request->all(), [
-            'student_academic_year_id' => 'required|integer|exists:student_academic_years,id',
+            'enrollment_id' => 'required|integer|exists:enrollments,id',
             'absent_date' => 'required|date',
             'reason' => 'nullable|string',
             'excused' => 'required|boolean',

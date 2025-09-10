@@ -11,7 +11,7 @@ class StudentAbsenceResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'student_academic_year_id' => $this->student_academic_year_id,
+            'enrollment_id' => $this->enrollment_id,
             'absent_date' => optional($this->absent_date)->format('Y-m-d'),
             'reason' => $this->reason,
             'excused' => (bool) $this->excused,

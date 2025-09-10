@@ -485,23 +485,20 @@ class EnrollmentController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'school_id' => 'required|integer|exists:schools,id',
-            'academic_year' => 'required|string',
             'grade_level_id' => 'required|integer|exists:grade_levels,id',
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'School, Year, and Grade Level are required', 'errors' => $validator->errors()], 422);
+            return response()->json(['message' => 'School, and Grade Level are required', 'errors' => $validator->errors()], 422);
         }
 
         $unassignedEnrollments = Enrollment::with([
                 'student:id,student_name,goverment_id,image',
                 'gradeLevel:id,name',
             ])
-            ->where('school_id', $request->input('school_id'))
-            ->where('academic_year', $request->input('academic_year'))
-            ->where('grade_level_id', $request->input('grade_level_id'))
-            ->whereNull('classroom_id')
-            ->where('status', 'active')
+            ->where('enrollments.school_id', $request->input('school_id'))
+            ->where('enrollments.grade_level_id', $request->input('grade_level_id'))
+            ->whereNull('enrollments.classroom_id')
             ->join('students', 'enrollments.student_id', '=', 'students.id')
             ->orderBy('students.student_name')
             ->select('enrollments.*')
@@ -511,13 +508,45 @@ class EnrollmentController extends Controller
     }
 
     /**
+     * Get students assigned to a classroom for a specific school/grade (optionally by year).
+     * GET /api/assigned-students-for-grade
+     */
+    public function getAssignedStudentsForGrade(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'school_id' => 'required|integer|exists:schools,id',
+            'grade_level_id' => 'required|integer|exists:grade_levels,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => 'School and Grade Level are required', 'errors' => $validator->errors()], 422);
+        }
+
+        $query = Enrollment::with([
+                'student:id,student_name,goverment_id,image',
+                'gradeLevel:id,name',
+                'classroom:id,name,capacity'
+            ])
+            ->where('enrollments.school_id', $request->input('school_id'))
+            ->where('enrollments.grade_level_id', $request->input('grade_level_id'))
+            ->whereNotNull('enrollments.classroom_id')
+            ->join('students', 'enrollments.student_id', '=', 'students.id')
+            ->orderBy('students.student_name')
+            ->select('enrollments.*');
+
+
+        $assigned = $query->get();
+
+        return EnrollmentResource::collection($assigned);
+    }
+    /**
      * Assign a student enrollment to a classroom (or unassign by passing null).
      * PUT /api/enrollments/{enrollment}/assign-classroom
      */
     public function assignToClassroom(Request $request, EnrollMent $enrollment)
     {
         // Authorization: require explicit permission to assign classroom
-        abort_unless(auth()->user() && auth()->user()->can('assign student to classroom'), 403, 'ليس لديك صلاحية لتعيين الطلاب للفصول');
+        // abort_unless(auth()->user() && auth()->user()->can('assign student to classroom'), 403, 'ليس لديك صلاحية لتعيين الطلاب للفصول');
 
         $validator = Validator::make($request->all(), [
             'classroom_id' => [

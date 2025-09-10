@@ -481,7 +481,11 @@ class StudentController extends Controller
             return response()->json(['message' => implode(' ', $validator->errors()->all())], 422); // Unprocessable Entity
         }
 
-        $student->update($request->all());
+        // Drop system-managed fields to avoid invalid types (e.g., JSON object) being saved
+        $data = $request->all();
+        unset($data['approved_by_user'], $data['approved'], $data['aproove_date']);
+
+        $student->update($data);
         return $student->fresh();
     }
 
