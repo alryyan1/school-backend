@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Validator; // Import the Validator class
 use TCPDF;
 use TCPDF_FONTS;
 use App\Helpers\TermsConditionsPdf;
+use App\Helpers\RevenueListPdf;
+use App\Models\StudentLedger;
 
 class StudentPdf extends TCPDF // Optional: Extend TCPDF for custom Headers/Footers
 {
@@ -141,6 +143,213 @@ class StudentController extends Controller
                 'to' => $students->lastItem(),
             ]
         ]);
+    }
+
+    /**
+     * Generate Revenues PDF based on student filters.
+     */
+    public function revenuesPdf(Request $request)
+    {
+        $query = Student::with([
+            'enrollments.school',
+            'enrollments.gradeLevel',
+            'enrollments.classroom',
+            'enrollments.feeInstallments',
+        ]);
+
+        // Apply same filters used in index for enrollments-related fields
+        if ($request->boolean('only_enrolled')) {
+            $query->whereHas('enrollments');
+        }
+        if ($request->boolean('only_approved')) {
+            $query->where('approved', true);
+        }
+        if ($request->filled('school_id')) {
+            $query->whereHas('enrollments', function ($q) use ($request) {
+                $q->where('school_id', $request->get('school_id'));
+            });
+        }
+        if ($request->filled('grade_level_id')) {
+            $query->whereHas('enrollments', function ($q) use ($request) {
+                $q->where('grade_level_id', $request->get('grade_level_id'));
+            });
+        }
+        if ($request->filled('classroom_id')) {
+            $query->whereHas('enrollments', function ($q) use ($request) {
+                $q->where('classroom_id', $request->get('classroom_id'));
+            });
+        }
+
+        $students = $query->get();
+
+        // Collect first enrollment IDs (latest by created_at) to summarize ledgers
+        $enrollmentIds = [];
+        foreach ($students as $student) {
+            $firstEnrollment = $student->enrollments->sortByDesc(function ($en) {
+                return $en->created_at?->timestamp ?? 0;
+            })->first();
+            if ($firstEnrollment && $firstEnrollment->id) {
+                $enrollmentIds[] = $firstEnrollment->id;
+            }
+        }
+
+        $byEnrollment = [];
+        $grandFees = 0.0;
+        $grandPayments = 0.0;
+        $grandDiscounts = 0.0;
+        $grandRefunds = 0.0;
+        $grandAdjustments = 0.0;
+        if (!empty($enrollmentIds)) {
+            $summaryRows = StudentLedger::whereIn('enrollment_id', $enrollmentIds)
+                ->selectRaw('
+                    enrollment_id,
+                    SUM(CASE WHEN transaction_type = "fee" THEN amount ELSE 0 END) as total_fees,
+                    SUM(CASE WHEN transaction_type = "payment" THEN ABS(amount) ELSE 0 END) as total_payments,
+                    SUM(CASE WHEN transaction_type = "discount" THEN amount ELSE 0 END) as total_discounts,
+                    SUM(CASE WHEN transaction_type = "refund" THEN amount ELSE 0 END) as total_refunds,
+                    SUM(CASE WHEN transaction_type = "adjustment" THEN amount ELSE 0 END) as total_adjustments
+                ')
+                ->groupBy('enrollment_id')
+                ->get();
+
+            foreach ($summaryRows as $row) {
+                $byEnrollment[$row->enrollment_id] = [
+                    'total_fees' => (float)$row->total_fees,
+                    'total_payments' => (float)$row->total_payments,
+                    'total_discounts' => (float)$row->total_discounts,
+                    'total_refunds' => (float)$row->total_refunds,
+                    'total_adjustments' => (float)$row->total_adjustments,
+                ];
+                $grandFees += (float)$row->total_fees;
+                $grandPayments += (float)$row->total_payments;
+                $grandDiscounts += (float)$row->total_discounts;
+                $grandRefunds += (float)$row->total_refunds;
+                $grandAdjustments += (float)$row->total_adjustments;
+            }
+        }
+
+        $global = [
+            'total_expected' => $grandFees,
+            'total_paid' => $grandPayments,
+            'total_discounts' => $grandDiscounts,
+            'total_refunds' => $grandRefunds,
+            'total_adjustments' => $grandAdjustments,
+            'total_balance' => max($grandFees - $grandPayments - $grandDiscounts + $grandRefunds + $grandAdjustments, 0),
+            'count' => $students->count(),
+            'by_enrollment' => $byEnrollment,
+        ];
+
+        $pdf = new RevenueListPdf($students, $global);
+        $pdf->SetTitle('تقرير الإيرادات');
+        $pdf->render();
+
+        return response($pdf->Output('revenues.pdf', 'S'))
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'attachment; filename="revenues.pdf"');
+    }
+
+    /**
+     * Web endpoint to open Revenues PDF in a new tab (inline display)
+     */
+    public function revenuesPdfWeb(Request $request)
+    {
+        // Reuse the same query building logic
+        $query = Student::with([
+            'enrollments.school',
+            'enrollments.gradeLevel',
+            'enrollments.classroom',
+            'enrollments.feeInstallments',
+        ]);
+
+        if ($request->boolean('only_enrolled')) {
+            $query->whereHas('enrollments');
+        }
+        if ($request->boolean('only_approved')) {
+            $query->where('approved', true);
+        }
+        if ($request->filled('school_id')) {
+            $query->whereHas('enrollments', function ($q) use ($request) {
+                $q->where('school_id', $request->get('school_id'));
+            });
+        }
+        if ($request->filled('grade_level_id')) {
+            $query->whereHas('enrollments', function ($q) use ($request) {
+                $q->where('grade_level_id', $request->get('grade_level_id'));
+            });
+        }
+        if ($request->filled('classroom_id')) {
+            $query->whereHas('enrollments', function ($q) use ($request) {
+                $q->where('classroom_id', $request->get('classroom_id'));
+            });
+        }
+
+        $students = $query->get();
+
+        // Collect first enrollment IDs (latest by created_at) to summarize ledgers
+        $enrollmentIds = [];
+        foreach ($students as $student) {
+            $firstEnrollment = $student->enrollments->sortByDesc(function ($en) {
+                return $en->created_at?->timestamp ?? 0;
+            })->first();
+            if ($firstEnrollment && $firstEnrollment->id) {
+                $enrollmentIds[] = $firstEnrollment->id;
+            }
+        }
+
+        $byEnrollment = [];
+        $grandFees = 0.0;
+        $grandPayments = 0.0;
+        $grandDiscounts = 0.0;
+        $grandRefunds = 0.0;
+        $grandAdjustments = 0.0;
+        if (!empty($enrollmentIds)) {
+            $summaryRows = StudentLedger::whereIn('enrollment_id', $enrollmentIds)
+                ->selectRaw('
+                    enrollment_id,
+                    SUM(CASE WHEN transaction_type = "fee" THEN amount ELSE 0 END) as total_fees,
+                    SUM(CASE WHEN transaction_type = "payment" THEN ABS(amount) ELSE 0 END) as total_payments,
+                    SUM(CASE WHEN transaction_type = "discount" THEN amount ELSE 0 END) as total_discounts,
+                    SUM(CASE WHEN transaction_type = "refund" THEN amount ELSE 0 END) as total_refunds,
+                    SUM(CASE WHEN transaction_type = "adjustment" THEN amount ELSE 0 END) as total_adjustments
+                ')
+                ->groupBy('enrollment_id')
+                ->get();
+
+            foreach ($summaryRows as $row) {
+                $byEnrollment[$row->enrollment_id] = [
+                    'total_fees' => (float)$row->total_fees,
+                    'total_payments' => (float)$row->total_payments,
+                    'total_discounts' => (float)$row->total_discounts,
+                    'total_refunds' => (float)$row->total_refunds,
+                    'total_adjustments' => (float)$row->total_adjustments,
+                ];
+                $grandFees += (float)$row->total_fees;
+                $grandPayments += (float)$row->total_payments;
+                $grandDiscounts += (float)$row->total_discounts;
+                $grandRefunds += (float)$row->total_refunds;
+                $grandAdjustments += (float)$row->total_adjustments;
+            }
+        }
+
+        $global = [
+            'total_expected' => $grandFees,
+            'total_paid' => $grandPayments,
+            'total_discounts' => $grandDiscounts,
+            'total_refunds' => $grandRefunds,
+            'total_adjustments' => $grandAdjustments,
+            'total_balance' => max($grandFees - $grandPayments - $grandDiscounts + $grandRefunds + $grandAdjustments, 0),
+            'count' => $students->count(),
+            'by_enrollment' => $byEnrollment,
+        ];
+
+        $pdf = new RevenueListPdf($students, $global);
+        $pdf->SetTitle('تقرير الإيرادات');
+        $pdf->render();
+
+        // Inline display instead of attachment
+        return response($pdf->Output('revenues.pdf', 'S'))
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'inline; filename="revenues.pdf"');
     }
     public function updatePhoto(Request $request, Student $student)
     {

@@ -5,6 +5,7 @@ use App\Http\Controllers\StudentController;
 use App\Http\Controllers\StudentFeePaymentController;
 use App\Http\Controllers\StudentWarningController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\ExpenseController;
 
 /*
 |--------------------------------------------------------------------------
@@ -44,3 +45,11 @@ Route::get('/enrollments/{enrollment}/fee-statement-pdf', [FeeInstallmentControl
     // --- Student Ledger PDF (web route for direct access) ---
     Route::get('/student-ledgers/enrollment/{enrollmentId}/pdf', [\App\Http\Controllers\StudentLedgerController::class, 'generatePdf'])
          ->name('student-ledgers.pdf');
+
+    // --- Revenues PDF (web route to open in new tab) ---
+    Route::get('/reports/revenues', [StudentController::class, 'revenuesPdfWeb'])
+         ->name('reports.revenues.pdf');
+
+    // --- Expenses PDF (web route to open in new tab) ---
+    Route::get('/reports/expenses', [ExpenseController::class, 'pdfWeb'])
+         ->name('reports.expenses.pdf');

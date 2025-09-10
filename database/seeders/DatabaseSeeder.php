@@ -12,6 +12,7 @@ use Database\Seeders\SchoolGradeLevelSeeder;
 use Database\Seeders\UserSeeder;
 use Database\Seeders\ClassroomSeeder;
 use Database\Seeders\StudentSeeder;
+use Database\Seeders\ExpenseSeeder;
 
 use Illuminate\Database\Seeder;
 
@@ -47,6 +48,9 @@ class DatabaseSeeder extends Seeder
             StudentWarningsTableSeeder::class,
             StudentAbsencesTableSeeder::class,
             StudentNotesTableSeeder::class,
+            
+            // --- Financial Data ---
+            ExpenseSeeder::class,
             
             // --- Legacy seeders (commented out) ---
             // SchoolGradeLevelsTableSeeder::class, // Legacy table seeder with hard-coded IDs (do not run)

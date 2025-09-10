@@ -28,6 +28,8 @@ use App\Http\Controllers\TransportRouteController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\StudentNoteController;
+use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\ExpenseCategoryController;
 
 /*
 |--------------------------------------------------------------------------
@@ -82,6 +84,7 @@ Route::middleware('auth:sanctum')->get('/auth/verify', [VerificationController::
 // Protected API routes (require authentication)
 Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('/students', StudentController::class);
+    Route::get('/revenues-pdf', [StudentController::class, 'revenuesPdf'])->name('revenues.pdf');
     Route::get('/students/search/{id}', [StudentController::class, 'searchById'])->name('students.searchById');
     Route::post('/students/{student}/accept', [StudentController::class, 'accept'])->name('students.accept');
     // --- School Grade Level Assignment Routes ---
@@ -189,4 +192,12 @@ Route::prefix('student-ledgers')->group(function () {
     Route::get('student-warnings/{studentWarning}/pdf', [StudentWarningController::class, 'generatePdf'])->name('student-warnings.api.pdf');
     // --- Student Absences ---
     Route::apiResource('student-absences', StudentAbsenceController::class)->only(['index','store','update','destroy']);
+    
+    // --- EXPENSE ROUTES ---
+    Route::apiResource('expenses', ExpenseController::class);
+    Route::get('expenses-statistics', [ExpenseController::class, 'statistics'])->name('expenses.statistics');
+    Route::get('expenses-pdf', [ExpenseController::class, 'pdf'])->name('expenses.pdf');
+    // --- EXPENSE CATEGORY ROUTES ---
+    Route::apiResource('expense-categories', ExpenseCategoryController::class);
+    Route::get('expense-categories-active', [ExpenseCategoryController::class, 'active'])->name('expense-categories.active');
 });
