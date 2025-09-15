@@ -19,7 +19,17 @@ class RoleController extends Controller
     {
         // Consider adding authorization:
         // $this->authorize('view roles'); // Or check if user is admin: if (!auth()->user()->hasRole('admin')) abort(403);
+        
         $roles = Role::withCount('permissions')->orderBy('name')->get();
+        
+        // Manually add users count for each role
+        foreach ($roles as $role) {
+            $role->users_count = DB::table('model_has_roles')
+                ->where('role_id', $role->id)
+                ->where('model_type', 'App\\Models\\User')
+                ->count();
+        }
+        
         return response()->json(['data' => $roles]);
     }
 

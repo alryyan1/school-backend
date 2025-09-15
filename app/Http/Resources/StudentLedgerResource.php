@@ -24,6 +24,7 @@ class StudentLedgerResource extends JsonResource
             'balance_after' => $this->balance_after,
             'transaction_date' => $this->transaction_date->format('Y-m-d'),
             'reference_number' => $this->reference_number,
+            'payment_method' => $this->payment_method,
             'metadata' => $this->metadata,
             'created_by' => $this->whenLoaded('createdBy', function () {
                 return [

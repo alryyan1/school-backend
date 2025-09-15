@@ -3,7 +3,6 @@
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-use Exception;
 
 return new class extends Migration
 {
@@ -18,7 +17,7 @@ return new class extends Migration
                 // Try to drop foreign key constraint if it exists
                 try {
                     $table->dropForeign(['student_id']);
-                } catch (Exception $e) {
+                } catch (\Exception $e) {
                     // Foreign key might not exist, continue
                 }
                 $table->dropIndex(['student_id']);

@@ -76,6 +76,12 @@ class StudentLedgerController extends Controller
             'amount' => 'required|numeric|min:0.01',
             'transaction_date' => 'required|date',
             'reference_number' => 'nullable|string|max:100',
+            'payment_method' => ['nullable', Rule::in([
+                StudentLedger::PAYMENT_METHOD_CASH,
+                StudentLedger::PAYMENT_METHOD_BANAK,
+                StudentLedger::PAYMENT_METHOD_FAWRI,
+                StudentLedger::PAYMENT_METHOD_OCASH,
+            ])],
             'metadata' => 'nullable|array',
         ]);
 
@@ -92,6 +98,7 @@ class StudentLedgerController extends Controller
                 'amount' => abs($request->amount), // Always store positive amounts, balance calculation handled in model
                 'transaction_date' => $request->transaction_date,
                 'reference_number' => $request->reference_number,
+                'payment_method' => $request->payment_method,
                 'metadata' => $request->metadata,
                 'created_by' => Auth::id(),
             ]);

@@ -19,6 +19,7 @@ class StudentLedger extends Model
         'balance_after',
         'transaction_date',
         'reference_number',
+        'payment_method',
         'metadata',
         'created_by',
     ];
@@ -36,6 +37,12 @@ class StudentLedger extends Model
     const TYPE_DISCOUNT = 'discount';
     const TYPE_REFUND = 'refund';
     const TYPE_ADJUSTMENT = 'adjustment';
+
+    // Payment method constants
+    const PAYMENT_METHOD_CASH = 'cash';
+    const PAYMENT_METHOD_BANAK = 'bankak';
+    const PAYMENT_METHOD_FAWRI = 'Fawri';
+    const PAYMENT_METHOD_OCASH = 'OCash';
 
     /**
      * Get the enrollment that owns the ledger entry.

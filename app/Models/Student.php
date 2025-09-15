@@ -100,7 +100,7 @@ class Student extends Model
 
     public function enrollments(): HasMany
     {
-        return $this->hasMany(EnrollMent::class);
+        return $this->hasMany(Enrollment::class);
     }
 
 

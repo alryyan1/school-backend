@@ -21,7 +21,7 @@ class UserController extends Controller
     public function index()
     {
         // Authorization disabled
-        $users = User::latest()->paginate(20); // Paginate users
+        $users = User::with('roles')->latest()->paginate(20); // Paginate users with roles
         return UserResource::collection($users);
     }
 
@@ -77,6 +77,7 @@ class UserController extends Controller
     public function show(User $user) // Route model binding
     {
         // Authorization disabled
+        $user->load('roles'); // Load roles for the specific user
         return new UserResource($user);
     }
 
@@ -110,7 +111,7 @@ class UserController extends Controller
             $user->syncRoles($request->input('spatie_roles', []));
         }
 
-        return new UserResource($user->fresh());
+        return new UserResource($user->fresh()->load('roles'));
     }
 
     /**

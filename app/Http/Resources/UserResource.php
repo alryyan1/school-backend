@@ -27,8 +27,8 @@ class UserResource extends JsonResource
             'created_at' => $this->created_at ? $this->created_at->toIso8601String() : null,
             'updated_at' => $this->updated_at ? $this->updated_at->toIso8601String() : null,
              // Add Spatie roles and permissions
-             'roles' => $this->whenLoaded('roles', fn() => $this->resource->getRoleNames()), // Collection of role names
-             'permissions' => $this->whenLoaded('permissions', fn() => $this->resource->getAllPermissions()->pluck('name')), // Collection of permission names
+             'roles' => $this->getRoleNames(), // Always get role names
+             'permissions' => $this->getAllPermissions()->pluck('name'), // Always get permission names
             // DO NOT include password or remember_token
         ];
     }
