@@ -54,7 +54,19 @@ class TeacherController extends Controller
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'خطأ في التحقق من المواد', 'errors' => $validator->errors()], 422);
+            // Get the first error message from each field
+            $errorMessages = [];
+            foreach ($validator->errors()->all() as $error) {
+                $errorMessages[] = $error;
+            }
+            
+            // Join all error messages into a single message
+            $consolidatedMessage = implode('، ', $errorMessages);
+            
+            return response()->json([
+                'message' => $consolidatedMessage,
+                'errors' => $validator->errors()
+            ], 422);
         }
 
         // Use sync to update the pivot table.
@@ -76,21 +88,62 @@ class TeacherController extends Controller
         // $this->authorize('create', Teacher::class);
 
         $validator = Validator::make($request->all(), [
+            // Required core fields
             'national_id' => 'required|string|max:20|unique:teachers,national_id',
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:teachers,email',
-            'phone' => 'nullable|string|max:15',
-            'gender' => 'required|in:ذكر,انثي', // Match enum in migration
-            'birth_date' => 'nullable|date_format:Y-m-d', // Expect YYYY-MM-DD format
+            'gender' => 'required|in:ذكر,انثي',
             'qualification' => 'required|string|max:255',
-            'hire_date' => 'required|date_format:Y-m-d', // Expect YYYY-MM-DD format
+            'hire_date' => 'required|date_format:Y-m-d',
+
+            // Optional contact
+            'phone' => 'nullable|string|max:15',
+            'secondary_phone' => 'nullable|string|max:15',
+            'whatsapp_number' => 'nullable|string|max:15',
             'address' => 'nullable|string',
-            'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // Image validation
-            // 'is_active' => 'sometimes|boolean', // Allow boolean (true/false, 1/0)
+
+            // Optional personal details
+            'birth_date' => 'nullable|date_format:Y-m-d',
+            'place_of_birth' => 'nullable|string|max:255',
+            'nationality' => 'nullable|string|max:255',
+            'document_type' => 'nullable|in:جواز سفر,البطاقة الشخصية,الرقم الوطني',
+            'document_number' => 'nullable|string|max:255',
+            'marital_status' => 'nullable|in:اعزب,متزوج,مطلق,ارمل',
+            'number_of_children' => 'nullable|integer',
+            'children_in_school' => 'nullable|integer',
+
+            // Optional education/professional
+            'highest_qualification' => 'nullable|in:جامعي,ثانوي',
+            'specialization' => 'nullable|string|max:255',
+            'academic_degree' => 'nullable|in:دبلوم,بكالوريوس,ماجستير,دكتوراه',
+            'appointment_date' => 'nullable|date_format:Y-m-d',
+            'years_of_teaching_experience' => 'nullable|integer',
+            'training_courses' => 'nullable|string',
+
+            // Files/paths
+            'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'academic_qualifications_doc_path' => 'nullable|string',
+            'personal_id_doc_path' => 'nullable|string',
+            'cv_doc_path' => 'nullable|string',
+
+            // Flags
+            // 'is_active' => 'sometimes|boolean',
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'خطأ في التحقق', 'errors' => $validator->errors()], 422);
+            // Get the first error message from each field
+            $errorMessages = [];
+            foreach ($validator->errors()->all() as $error) {
+                $errorMessages[] = $error;
+            }
+            
+            // Join all error messages into a single message
+            $consolidatedMessage = implode('، ', $errorMessages);
+            
+            return response()->json([
+                'message' => $consolidatedMessage,
+                'errors' => $validator->errors()
+            ], 422);
         }
 
         $validatedData = $validator->validated();
@@ -133,21 +186,59 @@ class TeacherController extends Controller
         // $this->authorize('update', $teacher);
 
         $validator = Validator::make($request->all(), [
-             'national_id' => ['required', 'string', 'max:20', Rule::unique('teachers')->ignore($teacher->id)],
-             'name' => 'sometimes|required|string|max:255', // sometimes = only validate if present
-             'email' => ['required', 'email', 'max:255', Rule::unique('teachers')->ignore($teacher->id)],
-             'phone' => 'nullable|string|max:15',
-             'gender' => 'sometimes|required|in:ذكر,انثي',
-             'birth_date' => 'nullable|date_format:Y-m-d',
-             'qualification' => 'sometimes|required|string|max:255',
-             'hire_date' => 'sometimes|required|date_format:Y-m-d',
-             'address' => 'nullable|string',
-             'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048', // Validate new photo if uploaded
-            
+            // Required core fields
+            'national_id' => ['required', 'string', 'max:20', Rule::unique('teachers')->ignore($teacher->id)],
+            'name' => 'sometimes|required|string|max:255',
+            'email' => ['required', 'email', 'max:255', Rule::unique('teachers')->ignore($teacher->id)],
+            'gender' => 'sometimes|required|in:ذكر,انثي',
+            'qualification' => 'sometimes|required|string|max:255',
+            'hire_date' => 'sometimes|required|date_format:Y-m-d',
+
+            // Optional contact
+            'phone' => 'nullable|string|max:15',
+            'secondary_phone' => 'nullable|string|max:15',
+            'whatsapp_number' => 'nullable|string|max:15',
+            'address' => 'nullable|string',
+
+            // Optional personal details
+            'birth_date' => 'nullable|date_format:Y-m-d',
+            'place_of_birth' => 'nullable|string|max:255',
+            'nationality' => 'nullable|string|max:255',
+            'document_type' => 'nullable|in:جواز سفر,البطاقة الشخصية,الرقم الوطني',
+            'document_number' => 'nullable|string|max:255',
+            'marital_status' => 'nullable|in:اعزب,متزوج,مطلق,ارمل',
+            'number_of_children' => 'nullable|integer',
+            'children_in_school' => 'nullable|integer',
+
+            // Optional education/professional
+            'highest_qualification' => 'nullable|in:جامعي,ثانوي',
+            'specialization' => 'nullable|string|max:255',
+            'academic_degree' => 'nullable|in:دبلوم,بكالوريوس,ماجستير,دكتوراه',
+            'appointment_date' => 'nullable|date_format:Y-m-d',
+            'years_of_teaching_experience' => 'nullable|integer',
+            'training_courses' => 'nullable|string',
+
+            // Files/paths
+            'photo' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'academic_qualifications_doc_path' => 'nullable|string',
+            'personal_id_doc_path' => 'nullable|string',
+            'cv_doc_path' => 'nullable|string',
         ]);
 
         if ($validator->fails()) {
-            return response()->json(['message' => 'خطأ في التحقق', 'errors' => $validator->errors()], 422);
+            // Get the first error message from each field
+            $errorMessages = [];
+            foreach ($validator->errors()->all() as $error) {
+                $errorMessages[] = $error;
+            }
+            
+            // Join all error messages into a single message
+            $consolidatedMessage = implode('، ', $errorMessages);
+            
+            return response()->json([
+                'message' => $consolidatedMessage,
+                'errors' => $validator->errors()
+            ], 422);
         }
 
         $validatedData = $validator->validated();
@@ -192,5 +283,64 @@ class TeacherController extends Controller
         // Return 204 No Content or a success message
         // return response()->noContent();
          return response()->json(['message' => 'تم حذف المدرس بنجاح'], 200);
+    }
+
+    /**
+     * Upload multiple PDF documents for a teacher and store them under a per-teacher folder.
+     * POST /api/teachers/{teacher}/documents
+     */
+    public function uploadDocuments(Request $request, Teacher $teacher)
+    {
+        // $this->authorize('update', $teacher); // Optional authorization
+
+        $validator = Validator::make($request->all(), [
+            'documents' => 'required|array',
+            'documents.*' => 'file|mimes:pdf|max:20480', // max 20MB per file
+        ]);
+
+        if ($validator->fails()) {
+            $errorMessages = [];
+            foreach ($validator->errors()->all() as $error) {
+                $errorMessages[] = $error;
+            }
+            $consolidatedMessage = implode('، ', $errorMessages);
+
+            return response()->json([
+                'message' => $consolidatedMessage,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $storedFiles = [];
+        if ($request->hasFile('documents')) {
+            foreach ($request->file('documents') as $file) {
+                // Store under public/teachers/{id}/documents
+                $path = $file->store('teachers/' . $teacher->id . '/documents', 'public');
+                if ($path) {
+                    $storedFiles[] = $path;
+                }
+            }
+        }
+
+        return response()->json([
+            'message' => 'تم رفع المستندات بنجاح',
+            'files' => $storedFiles,
+        ], 201);
+    }
+
+    /**
+     * List teacher uploaded documents (PDFs) under public path.
+     * GET /api/teachers/{teacher}/documents
+     */
+    public function listDocuments(Teacher $teacher)
+    {
+        $directory = 'teachers/' . $teacher->id . '/documents';
+        $files = [];
+        if (Storage::disk('public')->exists($directory)) {
+            $files = Storage::disk('public')->files($directory);
+        }
+        return response()->json([
+            'files' => $files,
+        ]);
     }
 }

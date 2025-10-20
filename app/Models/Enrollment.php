@@ -100,6 +100,10 @@ class Enrollment extends Model
         return $this->hasMany(FeeInstallment::class, 'enrollment_id', 'id')->orderBy('due_date'); // Order by due date
     }
 
+    public function studentLedgers(): HasMany {
+        return $this->hasMany(StudentLedger::class, 'enrollment_id', 'id');
+    }
+
         public function notes(): HasMany
         {
             return $this->hasMany(StudentNote::class);

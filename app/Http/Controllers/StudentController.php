@@ -14,6 +14,13 @@ use TCPDF_FONTS;
 use App\Helpers\TermsConditionsPdf;
 use App\Helpers\RevenueListPdf;
 use App\Models\StudentLedger;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
+use PhpOffice\PhpSpreadsheet\Worksheet\PageSetup;
 
 class StudentPdf extends TCPDF // Optional: Extend TCPDF for custom Headers/Footers
 {
@@ -52,9 +59,10 @@ class StudentController extends Controller
             'approvedByUser'
         );
 
-        // Search term filter
+        // Search term filter (supports name/phones/email/gov id, student id, or enrollment id)
         if ($request->filled('search')) {
-            $searchTerm = $request->get('search');
+            $searchTerm = trim((string) $request->get('search'));
+
             $query->where(function ($q) use ($searchTerm) {
                 $q->where('student_name', 'like', "%{$searchTerm}%")
                   ->orWhere('father_name', 'like', "%{$searchTerm}%")
@@ -63,7 +71,17 @@ class StudentController extends Controller
                   ->orWhere('mother_phone', 'like', "%{$searchTerm}%")
                   ->orWhere('email', 'like', "%{$searchTerm}%")
                   ->orWhere('goverment_id', 'like', "%{$searchTerm}%");
+                  
             });
+
+            // If numeric, also try matching student id or related enrollment id
+            if (ctype_digit($searchTerm)) {
+                $numeric = (int) $searchTerm;
+                $query->orWhere('id', $numeric)
+                      ->orWhereHas('enrollments', function ($en) use ($numeric) {
+                          $en->where('id', $numeric);
+                      });
+            }
         }
 
         // Wished school filter
@@ -102,6 +120,15 @@ class StudentController extends Controller
             $query->where('approved', false);
         }
 
+        // Only students with no payments filter
+        if ($request->boolean('only_no_payments')) {
+            $query->whereHas('enrollments', function ($q) {
+                $q->whereDoesntHave('studentLedgers', function ($ledgerQuery) {
+                    $ledgerQuery->where('transaction_type', 'payment');
+                });
+            });
+        }
+
         // School filter - filter by enrollment school
         if ($request->filled('school_id')) {
             $query->whereHas('enrollments', function ($q) use ($request) {
@@ -120,6 +147,18 @@ class StudentController extends Controller
         if ($request->filled('classroom_id')) {
             $query->whereHas('enrollments', function ($q) use ($request) {
                 $q->where('classroom_id', $request->get('classroom_id'));
+            });
+        }
+        if ($request->filled('enrollment_type')) {
+            $query->whereHas('enrollments', function ($q) use ($request) {
+                $q->where('enrollment_type', $request->get('enrollment_type'));
+            });
+        }
+
+        // Enrollment type filter - filter by enrollment type
+        if ($request->filled('enrollment_type')) {
+            $query->whereHas('enrollments', function ($q) use ($request) {
+                $q->where('enrollment_type', $request->get('enrollment_type'));
             });
         }
 
@@ -164,6 +203,16 @@ class StudentController extends Controller
         if ($request->boolean('only_approved')) {
             $query->where('approved', true);
         }
+        
+        // Only students with no payments filter
+        if ($request->boolean('only_no_payments')) {
+            $query->whereHas('enrollments', function ($q) {
+                $q->whereDoesntHave('studentLedgers', function ($ledgerQuery) {
+                    $ledgerQuery->where('transaction_type', 'payment');
+                });
+            });
+        }
+        
         if ($request->filled('school_id')) {
             $query->whereHas('enrollments', function ($q) use ($request) {
                 $q->where('school_id', $request->get('school_id'));
@@ -177,6 +226,11 @@ class StudentController extends Controller
         if ($request->filled('classroom_id')) {
             $query->whereHas('enrollments', function ($q) use ($request) {
                 $q->where('classroom_id', $request->get('classroom_id'));
+            });
+        }
+        if ($request->filled('enrollment_type')) {
+            $query->whereHas('enrollments', function ($q) use ($request) {
+                $q->where('enrollment_type', $request->get('enrollment_type'));
             });
         }
 
@@ -267,6 +321,16 @@ class StudentController extends Controller
         if ($request->boolean('only_approved')) {
             $query->where('approved', true);
         }
+        
+        // Only students with no payments filter
+        if ($request->boolean('only_no_payments')) {
+            $query->whereHas('enrollments', function ($q) {
+                $q->whereDoesntHave('studentLedgers', function ($ledgerQuery) {
+                    $ledgerQuery->where('transaction_type', 'payment');
+                });
+            });
+        }
+        
         if ($request->filled('school_id')) {
             $query->whereHas('enrollments', function ($q) use ($request) {
                 $q->where('school_id', $request->get('school_id'));
@@ -280,6 +344,11 @@ class StudentController extends Controller
         if ($request->filled('classroom_id')) {
             $query->whereHas('enrollments', function ($q) use ($request) {
                 $q->where('classroom_id', $request->get('classroom_id'));
+            });
+        }
+        if ($request->filled('enrollment_type')) {
+            $query->whereHas('enrollments', function ($q) use ($request) {
+                $q->where('enrollment_type', $request->get('enrollment_type'));
             });
         }
 
@@ -755,6 +824,15 @@ class StudentController extends Controller
             $query->where('approved', false);
         }
 
+        // Only students with no payments filter
+        if ($request->filled('only_no_payments') && $request->input('only_no_payments') === 'true') {
+            $query->whereHas('enrollments', function ($q) {
+                $q->whereDoesntHave('studentLedgers', function ($ledgerQuery) {
+                    $ledgerQuery->where('transaction_type', 'payment');
+                });
+            });
+        }
+
         // Sorting
         $sortBy = $request->input('sort_by', 'id');
         $sortOrder = $request->input('sort_order', 'desc');
@@ -812,6 +890,11 @@ class StudentController extends Controller
         // Add not approved filter info
         if ($request->filled('only_not_approved') && $request->input('only_not_approved') === 'true') {
             $filters[] = "غير المقبولين";
+        }
+
+        // Add no payments filter info
+        if ($request->filled('only_no_payments') && $request->input('only_no_payments') === 'true') {
+            $filters[] = "غير مدفوع";
         }
         
         if (!empty($filters)) {
@@ -943,6 +1026,307 @@ class StudentController extends Controller
         $pdf->AddPage();
         $pdf->addTermsBody();
         $pdf->Output('terms_and_conditions.pdf', 'I');
+        exit;
+    }
+
+    /**
+     * Export revenues data to Excel.
+     * GET /reports/revenues-excel
+     */
+    public function exportRevenuesExcel(Request $request)
+    {
+        // Build the same query as the PDF method
+        $query = Student::with([
+            'enrollments.school',
+            'enrollments.gradeLevel',
+            'enrollments.classroom',
+            'enrollments.feeInstallments',
+        ]);
+
+        // Apply same filters used in index for enrollments-related fields
+        if ($request->boolean('only_enrolled')) {
+            $query->whereHas('enrollments');
+        }
+        if ($request->boolean('only_approved')) {
+            $query->where('approved', true);
+        }
+        
+        // Only students with no payments filter
+        if ($request->boolean('only_no_payments')) {
+            $query->whereHas('enrollments', function ($q) {
+                $q->whereDoesntHave('studentLedgers', function ($ledgerQuery) {
+                    $ledgerQuery->where('transaction_type', 'payment');
+                });
+            });
+        }
+        
+        if ($request->filled('school_id')) {
+            $query->whereHas('enrollments', function ($q) use ($request) {
+                $q->where('school_id', $request->get('school_id'));
+            });
+        }
+        if ($request->filled('grade_level_id')) {
+            $query->whereHas('enrollments', function ($q) use ($request) {
+                $q->where('grade_level_id', $request->get('grade_level_id'));
+            });
+        }
+        if ($request->filled('classroom_id')) {
+            $query->whereHas('enrollments', function ($q) use ($request) {
+                $q->where('classroom_id', $request->get('classroom_id'));
+            });
+        }
+        if ($request->filled('enrollment_type')) {
+            $query->whereHas('enrollments', function ($q) use ($request) {
+                $q->where('enrollment_type', $request->get('enrollment_type'));
+            });
+        }
+        if ($request->filled('search')) {
+            $searchTerm = $request->get('search');
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('student_name', 'like', "%{$searchTerm}%")
+                  ->orWhere('goverment_id', 'like', "%{$searchTerm}%");
+            });
+        }
+
+        $students = $query->orderBy('id', 'desc')->get();
+
+        // Create new Spreadsheet object
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('الايرادات - رسوم الطلاب');
+
+        // Workbook defaults & RTL
+        $spreadsheet->getProperties()
+            ->setCreator(config('app.name'))
+            ->setTitle('الايرادات - رسوم الطلاب')
+            ->setSubject('تقرير ايرادات رسوم الطلاب');
+        $spreadsheet->getDefaultStyle()->getFont()->setName('Calibri')->setSize(11);
+        $sheet->setRightToLeft(true);
+        $sheet->getDefaultRowDimension()->setRowHeight(20);
+
+        // Build filter info text early (used in row 2)
+        $filterInfo = [];
+        if ($request->filled('school_id')) {
+            $school = \App\Models\School::find($request->input('school_id'));
+            if ($school) {
+                $filterInfo[] = "المدرسة: " . $school->name;
+            }
+        }
+        if ($request->filled('grade_level_id')) {
+            $gradeLevel = \App\Models\GradeLevel::find($request->input('grade_level_id'));
+            if ($gradeLevel) {
+                $filterInfo[] = "المرحلة: " . $gradeLevel->name;
+            }
+        }
+        if ($request->filled('classroom_id')) {
+            $classroom = \App\Models\Classroom::find($request->input('classroom_id'));
+            if ($classroom) {
+                $filterInfo[] = "الفصل: " . $classroom->name;
+            }
+        }
+        if ($request->boolean('only_no_payments')) {
+            $filterInfo[] = "غير مدفوع";
+        }
+        if ($request->filled('enrollment_type')) {
+            $typeLabels = [
+                'regular' => 'عادي',
+                'scholarship' => 'منحة',
+                'free' => 'إعفاء'
+            ];
+            $filterInfo[] = "نوع التسجيل: " . ($typeLabels[$request->input('enrollment_type')] ?? $request->input('enrollment_type'));
+        }
+        if ($request->filled('search')) {
+            $filterInfo[] = "البحث: " . $request->input('search');
+        }
+
+        // Title row (row 1)
+        $sheet->mergeCells('A1:I1');
+        $sheet->setCellValue('A1', 'الايرادات - رسوم الطلاب (' . now()->format('Y-m-d H:i') . ')');
+        $sheet->getStyle('A1')->applyFromArray([
+            'font' => ['bold' => true, 'size' => 14, 'color' => ['rgb' => '1F4E78']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER]
+        ]);
+
+        // Filter info row (row 2)
+        $sheet->mergeCells('A2:I2');
+        $sheet->setCellValue('A2', empty($filterInfo) ? 'بدون فلاتر' : ('فلترة: ' . implode(' | ', $filterInfo)));
+        $sheet->getStyle('A2')->applyFromArray([
+            'font' => ['italic' => true, 'size' => 10, 'color' => ['rgb' => '666666']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F2F2F2']]
+        ]);
+
+        // Headers (row 3)
+        $headers = [
+            'A3' => 'رقم التسجيل',
+            'B3' => 'اسم الطالب',
+            'C3' => 'المدرسة',
+            'D3' => 'المرحلة',
+            'E3' => 'الفصل',
+            'F3' => 'الرسوم (دفتر)',
+            'G3' => 'المدفوع (دفتر)',
+            'H3' => 'الخصومات',
+            'I3' => 'المتبقي'
+        ];
+        foreach ($headers as $cell => $value) {
+            $sheet->setCellValue($cell, $value);
+        }
+
+        // Style headers
+        $headerRange = 'A3:I3';
+        $sheet->getStyle($headerRange)->applyFromArray([
+            'font' => [
+                'bold' => true,
+                'size' => 12,
+                'color' => ['rgb' => 'FFFFFF']
+            ],
+            'fill' => [
+                'fillType' => Fill::FILL_SOLID,
+                'startColor' => ['rgb' => '4472C4']
+            ],
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                'vertical' => Alignment::VERTICAL_CENTER
+            ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => Border::BORDER_THIN,
+                    'color' => ['rgb' => '000000']
+                ]
+            ]
+        ]);
+        // Freeze panes below header
+        $sheet->freezePane('A4');
+
+        // Get ledger summaries for all enrollments
+        $enrollmentIds = $students->pluck('enrollments')->flatten()->pluck('id')->unique()->toArray();
+        $ledgerSummaries = [];
+        
+        if (!empty($enrollmentIds)) {
+            $summaries = StudentLedger::selectRaw('
+                enrollment_id,
+                SUM(CASE WHEN transaction_type = "fee" THEN amount ELSE 0 END) as total_fees,
+                SUM(CASE WHEN transaction_type = "payment" THEN amount ELSE 0 END) as total_payments,
+                SUM(CASE WHEN transaction_type = "discount" THEN amount ELSE 0 END) as total_discounts,
+                SUM(CASE WHEN transaction_type = "refund" THEN amount ELSE 0 END) as total_refunds,
+                SUM(CASE WHEN transaction_type = "adjustment" THEN amount ELSE 0 END) as total_adjustments
+            ')
+            ->whereIn('enrollment_id', $enrollmentIds)
+            ->groupBy('enrollment_id')
+            ->get();
+
+            foreach ($summaries as $summary) {
+                $ledgerSummaries[$summary->enrollment_id] = $summary;
+            }
+        }
+
+        // Add data rows
+        $dataStartRow = 4;
+        $row = $dataStartRow;
+        foreach ($students as $student) {
+            $enrollment = $student->enrollments->first();
+            if (!$enrollment) continue;
+
+            $enrollmentId = $enrollment->id;
+            $summary = $ledgerSummaries[$enrollmentId] ?? null;
+
+            // Calculate values
+            $totalFees = $summary ? $summary->total_fees : $enrollment->fees;
+            $totalPayments = $summary ? $summary->total_payments : 0;
+            $totalDiscounts = $summary ? $summary->total_discounts : 0;
+            $remaining = max(0, $totalFees - $totalPayments - $totalDiscounts);
+
+            $sheet->setCellValue("A{$row}", (int)$enrollmentId);
+            $sheet->setCellValue("B{$row}", $student->student_name ?? '');
+            $sheet->setCellValue("C{$row}", $enrollment->school->name ?? '');
+            $sheet->setCellValue("D{$row}", $enrollment->gradeLevel->name ?? '');
+            $sheet->setCellValue("E{$row}", $enrollment->classroom->name ?? '');
+            $sheet->setCellValue("F{$row}", (float)$totalFees);
+            $sheet->setCellValue("G{$row}", (float)$totalPayments);
+            $sheet->setCellValue("H{$row}", (float)$totalDiscounts);
+            $sheet->setCellValue("I{$row}", (float)$remaining);
+
+            // Style data rows
+            $dataRange = "A{$row}:I{$row}";
+            $sheet->getStyle($dataRange)->applyFromArray([
+                'alignment' => [
+                    'horizontal' => Alignment::HORIZONTAL_CENTER,
+                    'vertical' => Alignment::VERTICAL_CENTER
+                ],
+                'borders' => [
+                    'allBorders' => [
+                        'borderStyle' => Border::BORDER_THIN,
+                        'color' => ['rgb' => '000000']
+                    ]
+                ]
+            ]);
+
+            // Highlight rows with discounts or no payments
+            if ($totalDiscounts > 0) {
+                $sheet->getStyle($dataRange)->applyFromArray([
+                    'fill' => [
+                        'fillType' => Fill::FILL_SOLID,
+                        'startColor' => ['rgb' => 'FFF2CC']
+                    ]
+                ]);
+            } elseif ($totalPayments == 0) {
+                $sheet->getStyle($dataRange)->applyFromArray([
+                    'fill' => [
+                        'fillType' => Fill::FILL_SOLID,
+                        'startColor' => ['rgb' => 'FFE6E6']
+                    ]
+                ]);
+            }
+
+            $row++;
+        }
+
+        // Auto-size columns
+        foreach (range('A', 'I') as $column) {
+            $sheet->getColumnDimension($column)->setAutoSize(true);
+        }
+
+        // Number formats for numeric columns
+        $dataEndRow = $row - 1;
+        if ($dataEndRow >= $dataStartRow) {
+            $sheet->getStyle("F{$dataStartRow}:I{$dataEndRow}")
+                ->getNumberFormat()->setFormatCode('#,##0');
+
+            // Auto filter on header + data
+            $sheet->setAutoFilter("A3:I{$dataEndRow}");
+
+            // Totals row
+            $totalsRow = $dataEndRow + 1;
+            $sheet->setCellValue("E{$totalsRow}", 'الإجمالي');
+            $sheet->setCellValue("F{$totalsRow}", "=SUBTOTAL(9,F{$dataStartRow}:F{$dataEndRow})");
+            $sheet->setCellValue("G{$totalsRow}", "=SUBTOTAL(9,G{$dataStartRow}:G{$dataEndRow})");
+            $sheet->setCellValue("H{$totalsRow}", "=SUBTOTAL(9,H{$dataStartRow}:H{$dataEndRow})");
+            $sheet->setCellValue("I{$totalsRow}", "=SUBTOTAL(9,I{$dataStartRow}:I{$dataEndRow})");
+            $sheet->getStyle("E{$totalsRow}:I{$totalsRow}")->applyFromArray([
+                'font' => ['bold' => true],
+                'borders' => [
+                    'top' => ['borderStyle' => Border::BORDER_MEDIUM]
+                ]
+            ]);
+            $sheet->getStyle("F{$totalsRow}:I{$totalsRow}")->getNumberFormat()->setFormatCode('#,##0');
+        }
+
+        // Page setup for printing
+        $sheet->getPageSetup()->setOrientation(PageSetup::ORIENTATION_LANDSCAPE);
+        $sheet->getPageSetup()->setPaperSize(PageSetup::PAPERSIZE_A4);
+        $sheet->getPageSetup()->setFitToWidth(1)->setFitToHeight(0);
+        $sheet->getPageMargins()->setTop(0.4)->setBottom(0.4)->setLeft(0.3)->setRight(0.3);
+
+        // Generate filename
+        $filename = 'revenues_' . date('Y-m-d_H-i-s') . '.xlsx';
+
+        // Set headers for download
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+
+        // Create writer and output
+        $writer = new Xlsx($spreadsheet);
+        $writer->save('php://output');
         exit;
     }
 }

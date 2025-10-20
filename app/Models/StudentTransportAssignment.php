@@ -33,6 +33,6 @@ class StudentTransportAssignment extends Model {
     use HasFactory;
     protected $fillable = ['student_academic_year_id', 'transport_route_id', 'pickup_point', 'dropoff_point'];
 
-    public function studentAcademicYear(): BelongsTo { return $this->belongsTo(EnrollMent::class); }
+    public function studentAcademicYear(): BelongsTo { return $this->belongsTo(Enrollment::class); }
     public function transportRoute(): BelongsTo { return $this->belongsTo(TransportRoute::class); }
 }

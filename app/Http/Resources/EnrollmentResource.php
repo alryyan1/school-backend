@@ -23,6 +23,7 @@ class EnrollmentResource extends JsonResource
             'classroom_id' => $this->classroom_id,
             'fees' => $this->fees,
             'discount' => $this->discount,
+            
             'status' => $this->status,
             'enrollment_type' => $this->enrollment_type,
             // Load relationships in controller

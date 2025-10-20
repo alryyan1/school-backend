@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Enrollment;
 use App\Models\Student;
 use App\Models\StudentLedger;
+use App\Models\EnrollmentLog;
 use Illuminate\Http\Request;
 use App\Http\Resources\EnrollmentResource;
 use App\Models\StudentTransportAssignment;
@@ -236,8 +237,10 @@ class EnrollmentController extends Controller
             ],
             'discount' => ['sometimes','nullable','integer','in:0,5,10,15,20,25,30,40,50'],
             'status' => ['sometimes', 'required', Rule::in(['active', 'transferred', 'graduated', 'withdrawn'])],
-            'enrollment_type' => ['sometimes','required', Rule::in(['regular','scholarship'])],
+            'enrollment_type' => ['sometimes','required', Rule::in(['regular','scholarship','free'])],
             'fees' => ['sometimes', 'nullable', 'integer'],
+            'grade_level_id' => ['sometimes', 'nullable', 'integer', Rule::exists('grade_levels', 'id')],
+            'academic_year' => ['sometimes', 'nullable', 'string'],
             // Do not allow changing student, year, grade, school via update
         ]);
 
@@ -247,6 +250,16 @@ class EnrollmentController extends Controller
 
         $validatedData = $validator->validated();
         
+        // Capture old values for logging before any changes
+        $oldGradeLevelId = $enrollment->grade_level_id;
+        $oldStatus = $enrollment->status;
+        $oldClassroomId = $enrollment->classroom_id;
+        $oldAcademicYear = $enrollment->academic_year;
+        $oldDiscount = $enrollment->discount;
+        
+        if(isset($validatedData['grade_level_id'])){
+            $enrollment->classroom_id = null;
+        }
         // Auto-fill fees from school's annual_fees if fees are being updated and not provided
         if (isset($validatedData['fees']) && ($validatedData['fees'] === null || $validatedData['fees'] === 0)) {
             $school = \App\Models\School::find($enrollment->school_id);
@@ -256,12 +269,22 @@ class EnrollmentController extends Controller
                 $validatedData['fees'] = 0; // Default to 0 if school has no annual fees
             }
         }
-
+        
         // Check if fees were changed and create appropriate ledger entries
         $oldFees = $enrollment->fees;
         $newFees = $validatedData['fees'] ?? $oldFees;
         
         $enrollment->update($validatedData);
+        
+        // Log changes after update
+        $this->logEnrollmentChanges($enrollment, $validatedData, [
+            'old_grade_level_id' => $oldGradeLevelId,
+            'old_status' => $oldStatus,
+            'old_classroom_id' => $oldClassroomId,
+            'old_academic_year' => $oldAcademicYear,
+            'old_discount' => $oldDiscount,
+            'old_fees' => $oldFees,
+        ]);
         
         // If fees changed, create ledger entries
         if ($oldFees !== $newFees && $newFees > 0) {
@@ -582,5 +605,230 @@ class EnrollmentController extends Controller
         $enrollment->save();
 
         return new EnrollmentResource($enrollment->fresh()->load(['student', 'classroom', 'gradeLevel']));
+    }
+
+    /**
+     * Get enrollment logs for a specific enrollment.
+     */
+    public function getLogs(Request $request, Enrollment $enrollment)
+    {
+        $logs = EnrollmentLog::where('enrollment_id', $enrollment->id)
+            ->with(['user:id,name'])
+            ->orderBy('changed_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'data' => $logs,
+            'enrollment' => new EnrollmentResource($enrollment->load(['student', 'gradeLevel', 'classroom', 'school']))
+        ]);
+    }
+
+    /**
+     * Get enrollment logs for a specific student.
+     */
+    public function getStudentLogs(Request $request, Student $student)
+    {
+        $logs = EnrollmentLog::where('student_id', $student->id)
+            ->with(['user:id,name', 'enrollment.gradeLevel', 'enrollment.school'])
+            ->orderBy('changed_at', 'desc')
+            ->get();
+
+        return response()->json([
+            'data' => $logs,
+            'student' => [
+                'id' => $student->id,
+                'student_name' => $student->student_name,
+            ]
+        ]);
+    }
+
+    /**
+     * Log enrollment changes for audit trail.
+     */
+    private function logEnrollmentChanges(Enrollment $enrollment, array $newData, array $oldData): void
+    {
+        try {
+            // Log grade level changes
+            if (isset($newData['grade_level_id']) && $newData['grade_level_id'] != $oldData['old_grade_level_id']) {
+                $oldGradeLevel = \App\Models\GradeLevel::find($oldData['old_grade_level_id']);
+                $newGradeLevel = \App\Models\GradeLevel::find($newData['grade_level_id']);
+                
+                EnrollmentLog::logChange(
+                    $enrollment->id,
+                    $enrollment->student_id,
+                    'grade_level_change',
+                    'grade_level_id',
+                    $oldData['old_grade_level_id'],
+                    $newData['grade_level_id'],
+                    sprintf(
+                        'تم تغيير المرحلة الدراسية من "%s" إلى "%s"',
+                        $oldGradeLevel?->name ?? 'غير محدد',
+                        $newGradeLevel?->name ?? 'غير محدد'
+                    ),
+                    [
+                        'old_grade_level_name' => $oldGradeLevel?->name,
+                        'new_grade_level_name' => $newGradeLevel?->name,
+                        'academic_year' => $enrollment->academic_year,
+                        'school_id' => $enrollment->school_id,
+                    ]
+                );
+            }
+
+            // Log status changes
+            if (isset($newData['status']) && $newData['status'] != $oldData['old_status']) {
+                EnrollmentLog::logChange(
+                    $enrollment->id,
+                    $enrollment->student_id,
+                    'status_change',
+                    'status',
+                    $oldData['old_status'],
+                    $newData['status'],
+                    sprintf(
+                        'تم تغيير حالة التسجيل من "%s" إلى "%s"',
+                        $this->getStatusLabel($oldData['old_status']),
+                        $this->getStatusLabel($newData['status'])
+                    ),
+                    [
+                        'academic_year' => $enrollment->academic_year,
+                        'school_id' => $enrollment->school_id,
+                    ]
+                );
+            }
+
+            // Log classroom changes
+            if (isset($newData['classroom_id']) && $newData['classroom_id'] != $oldData['old_classroom_id']) {
+                $oldClassroom = \App\Models\Classroom::find($oldData['old_classroom_id']);
+                $newClassroom = \App\Models\Classroom::find($newData['classroom_id']);
+                
+                EnrollmentLog::logChange(
+                    $enrollment->id,
+                    $enrollment->student_id,
+                    'classroom_change',
+                    'classroom_id',
+                    $oldData['old_classroom_id'],
+                    $newData['classroom_id'],
+                    sprintf(
+                        'تم تغيير الفصل الدراسي من "%s" إلى "%s"',
+                        $oldClassroom?->name ?? 'غير محدد',
+                        $newClassroom?->name ?? 'غير محدد'
+                    ),
+                    [
+                        'old_classroom_name' => $oldClassroom?->name,
+                        'new_classroom_name' => $newClassroom?->name,
+                        'academic_year' => $enrollment->academic_year,
+                        'school_id' => $enrollment->school_id,
+                    ]
+                );
+            }
+
+            // Log academic year changes
+            if (isset($newData['academic_year']) && $newData['academic_year'] != $oldData['old_academic_year']) {
+                EnrollmentLog::logChange(
+                    $enrollment->id,
+                    $enrollment->student_id,
+                    'academic_year_change',
+                    'academic_year',
+                    $oldData['old_academic_year'],
+                    $newData['academic_year'],
+                    sprintf(
+                        'تم تغيير العام الدراسي من "%s" إلى "%s"',
+                        $oldData['old_academic_year'],
+                        $newData['academic_year']
+                    ),
+                    [
+                        'school_id' => $enrollment->school_id,
+                    ]
+                );
+            }
+
+            // Log discount changes
+            if (isset($newData['discount']) && $newData['discount'] != $oldData['old_discount']) {
+                EnrollmentLog::logChange(
+                    $enrollment->id,
+                    $enrollment->student_id,
+                    'discount_change',
+                    'discount',
+                    $oldData['old_discount'],
+                    $newData['discount'],
+                    sprintf(
+                        'تم تغيير الخصم من %d%% إلى %d%%',
+                        $oldData['old_discount'] ?? 0,
+                        $newData['discount'] ?? 0
+                    ),
+                    [
+                        'academic_year' => $enrollment->academic_year,
+                        'school_id' => $enrollment->school_id,
+                    ]
+                );
+            }
+
+        } catch (\Exception $e) {
+            // Log the error but don't fail the enrollment update
+            \Log::error('Failed to log enrollment changes for enrollment ' . $enrollment->id . ': ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Change enrollment type for a specific enrollment.
+     */
+    public function changeEnrollmentType(Request $request, Enrollment $enrollment)
+    {
+        // Authorization: change of enrollment_type requires explicit permission
+        // abort_unless(auth()->user() && auth()->user()->can('set student enrollment type'), 403, 'ليس لديك صلاحية لتحديد نوع تسجيل الطالب');
+
+        $validator = Validator::make($request->all(), [
+            'enrollment_type' => ['required', Rule::in(['regular','scholarship','free'])],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => 'خطأ في التحقق', 'errors' => $validator->errors()], 422);
+        }
+
+        $validatedData = $validator->validated();
+        $oldEnrollmentType = $enrollment->enrollment_type;
+        $newEnrollmentType = $validatedData['enrollment_type'];
+
+        // Check if the enrollment type is actually changing
+        if ($oldEnrollmentType === $newEnrollmentType) {
+            return response()->json(['message' => 'نوع التسجيل لم يتغير'], 200);
+        }
+
+        // Update the enrollment type
+        $enrollment->update(['enrollment_type' => $newEnrollmentType]);
+
+        // Log the enrollment type change
+        $this->logEnrollmentChanges($enrollment, $validatedData, [
+            'old_enrollment_type' => $oldEnrollmentType,
+        ]);
+
+        // Get enrollment type labels for response
+        $typeLabels = [
+            'regular' => 'عادي',
+            'scholarship' => 'منحة',
+            'free' => 'إعفاء'
+        ];
+
+        return response()->json([
+            'message' => sprintf(
+                'تم تغيير نوع التسجيل من %s إلى %s بنجاح',
+                $typeLabels[$oldEnrollmentType] ?? $oldEnrollmentType,
+                $typeLabels[$newEnrollmentType] ?? $newEnrollmentType
+            ),
+            'enrollment' => new EnrollmentResource($enrollment->load(['student', 'gradeLevel', 'classroom', 'school']))
+        ], 200);
+    }
+
+    /**
+     * Get human-readable status label.
+     */
+    private function getStatusLabel(string $status): string
+    {
+        return match($status) {
+            'active' => 'نشط',
+            'transferred' => 'منقول',
+            'graduated' => 'متخرج',
+            'withdrawn' => 'منسحب',
+            default => $status,
+        };
     }
 }

@@ -60,11 +60,30 @@ class Teacher extends Model
         'phone',
         'gender',
         'birth_date',
+        'place_of_birth',
+        'nationality',
+        'document_type',
+        'document_number',
+        'marital_status',
+        'number_of_children',
+        'children_in_school',
+        'secondary_phone',
+        'whatsapp_number',
         'qualification',
+        'highest_qualification',
+        'specialization',
+        'academic_degree',
         'hire_date',
+        'appointment_date',
+        'years_of_teaching_experience',
+        'training_courses',
         'address',
         'photo', // Path to photo
+        'academic_qualifications_doc_path',
+        'personal_id_doc_path',
+        'cv_doc_path',
         'is_active',
+        
     ];
     public function subjects(): BelongsToMany
     {
@@ -73,7 +92,11 @@ class Teacher extends Model
     protected $casts = [
         'birth_date' => 'date:Y-m-d', // Cast to date, format on serialization
         'hire_date' => 'date:Y-m-d',  // Cast to date, format on serialization
+        'appointment_date' => 'date:Y-m-d',  // Cast to date, format on serialization
         'is_active' => 'boolean',
+        'number_of_children' => 'integer',
+        'children_in_school' => 'integer',
+        'years_of_teaching_experience' => 'integer',
     ];
     // In app/Models/Teacher.php
     public function academicYearSubjects(): HasMany

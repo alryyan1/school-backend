@@ -40,7 +40,7 @@ class PaymentTransaction extends Model
      */
     public function enrollment(): BelongsTo
     {
-        return $this->belongsTo(EnrollMent::class);
+        return $this->belongsTo(Enrollment::class);
     }
 
     /**

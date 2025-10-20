@@ -49,7 +49,7 @@ class StudentLedger extends Model
      */
     public function enrollment(): BelongsTo
     {
-        return $this->belongsTo(EnrollMent::class);
+        return $this->belongsTo(Enrollment::class);
     }
 
     /**
@@ -89,12 +89,19 @@ class StudentLedger extends Model
      */
     public static function getCurrentBalance($enrollmentId)
     {
-        $latestEntry = self::where('enrollment_id', $enrollmentId)
-            ->orderBy('transaction_date', 'desc')
-            ->orderBy('id', 'desc')
-            ->first();
+        $totalFees = self::where('enrollment_id', $enrollmentId)
+            ->where('transaction_type', self::TYPE_FEE)
+            ->sum('amount');
 
-        return $latestEntry ? $latestEntry->balance_after : 0;
+        $totalPayments = self::where('enrollment_id', $enrollmentId)
+            ->where('transaction_type', self::TYPE_PAYMENT)
+            ->sum('amount');
+
+        $totalDiscounts = self::where('enrollment_id', $enrollmentId)
+            ->where('transaction_type', self::TYPE_DISCOUNT)
+            ->sum('amount');
+
+        return ($totalFees) - ($totalDiscounts + $totalPayments);
     }
 
     /**
@@ -102,29 +109,46 @@ class StudentLedger extends Model
      */
     public static function addEntry($data)
     {
-        $currentBalance = self::getCurrentBalance($data['enrollment_id']);
-        
-        // Calculate new balance based on transaction type
+        $enrollmentId = $data['enrollment_id'];
+
+        $totalFees = self::where('enrollment_id', $enrollmentId)
+            ->where('transaction_type', self::TYPE_FEE)
+            ->sum('amount');
+
+        $totalPayments = self::where('enrollment_id', $enrollmentId)
+            ->where('transaction_type', self::TYPE_PAYMENT)
+            ->sum('amount');
+
+        $totalDiscounts = self::where('enrollment_id', $enrollmentId)
+            ->where('transaction_type', self::TYPE_DISCOUNT)
+            ->sum('amount');
+
         switch ($data['transaction_type']) {
             case self::TYPE_FEE:
-                // Fees increase the balance (student owes more)
-                $newBalance = $currentBalance + $data['amount'];
+                $newBalance = ($totalFees + $data['amount']) - ($totalDiscounts + $totalPayments);
                 break;
-                
+
             case self::TYPE_PAYMENT:
-            case self::TYPE_DISCOUNT:
-            case self::TYPE_REFUND:
-                // Payments, discounts, and refunds decrease the balance (student owes less)
-                $newBalance = $currentBalance - $data['amount'];
+                $newBalance = ($totalFees) - ($totalDiscounts + $totalPayments + $data['amount']);
                 break;
-                
+
+            case self::TYPE_DISCOUNT:
+                $newBalance = ($totalFees) - ($totalDiscounts + $data['amount'] + $totalPayments);
+                break;
+
+            case self::TYPE_REFUND:
+                // Treat refund similar to payment (reduce what the student owes)
+                $newBalance = ($totalFees) - ($totalDiscounts + $totalPayments + $data['amount']);
+                break;
+
             case self::TYPE_ADJUSTMENT:
-                // Adjustments can be positive or negative based on amount sign
+                // Adjustment directly affects balance; positive increases what is owed, negative decreases
+                $currentBalance = ($totalFees) - ($totalDiscounts + $totalPayments);
                 $newBalance = $currentBalance + $data['amount'];
                 break;
-                
+
             default:
-                // Default behavior: add the amount
+                $currentBalance = ($totalFees) - ($totalDiscounts + $totalPayments);
                 $newBalance = $currentBalance + $data['amount'];
                 break;
         }

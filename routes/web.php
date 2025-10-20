@@ -51,6 +51,10 @@ Route::get('/enrollments/{enrollment}/fee-statement-pdf', [FeeInstallmentControl
     Route::get('/reports/revenues', [StudentController::class, 'revenuesPdfWeb'])
          ->name('reports.revenues.pdf');
 
+    // --- Revenues Excel (web route to download Excel file) ---
+    Route::get('/reports/revenues-excel', [StudentController::class, 'exportRevenuesExcel'])
+         ->name('reports.revenues.excel');
+
     // --- Expenses PDF (web route to open in new tab) ---
     Route::get('/reports/expenses', [ExpenseController::class, 'pdfWeb'])
          ->name('reports.expenses.pdf');

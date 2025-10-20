@@ -18,6 +18,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\SchoolController;
 
 use App\Http\Controllers\EnrollmentController;
+use App\Http\Controllers\EnrollmentLogController;
 use App\Http\Controllers\StudentFeePaymentController;
 use App\Http\Controllers\StudentTransportAssignmentController;
 use App\Http\Controllers\StudentWarningController;
@@ -97,6 +98,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // --- End Assignment Routes ---
 
     Route::apiResource('/teachers', TeacherController::class);
+    Route::post('/teachers/{teacher}/documents', [TeacherController::class, 'uploadDocuments']);
+    Route::get('/teachers/{teacher}/documents', [TeacherController::class, 'listDocuments']);
     Route::apiResource('/schools', SchoolController::class);
     Route::delete('/schools/{school}/user', [SchoolController::class, 'unassignUser'])->name('schools.unassignUser');
     // --- ACADEMIC YEAR ROUTES ---
@@ -127,6 +130,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/unassigned-students-for-grade', [EnrollmentController::class, 'getUnassignedStudentsForGrade']);
     Route::get('/assigned-students-for-grade', [EnrollmentController::class, 'getAssignedStudentsForGrade']);
     Route::put('/enrollments/{enrollment}/assign-classroom', [EnrollmentController::class, 'assignToClassroom']);
+    Route::put('/enrollments/{enrollment}/change-type', [EnrollmentController::class, 'changeEnrollmentType']);
+    
+    // Enrollment logs routes
+    Route::get('/enrollments/{enrollment}/logs', [EnrollmentController::class, 'getLogs']);
+    Route::get('/students/{student}/enrollment-logs', [EnrollmentController::class, 'getStudentLogs']);
+    
+    // General enrollment logs routes
+    Route::get('/enrollment-logs', [EnrollmentLogController::class, 'index']);
+    Route::get('/enrollment-logs/statistics', [EnrollmentLogController::class, 'statistics']);
+    Route::get('/enrollment-logs/{enrollmentLog}', [EnrollmentLogController::class, 'show']);
 
     // --- STUDENT FEE PAYMENT ROUTES ---
     Route::apiResource('/student-fee-payments', StudentFeePaymentController::class);
@@ -207,4 +220,6 @@ Route::prefix('student-ledgers')->group(function () {
     // --- WhatsApp (Ultramsg) ---
     Route::post('/whatsapp/send-text', [UltramsgController::class, 'sendText'])->name('whatsapp.sendText');
     Route::post('/whatsapp/send-document', [UltramsgController::class, 'sendDocument'])->name('whatsapp.sendDocument');
+    Route::post('/whatsapp/bulk-send-text', [UltramsgController::class, 'bulkSendText'])->name('whatsapp.bulkSendText');
+    Route::get('/whatsapp/bulk-send-status/{id}', [UltramsgController::class, 'getBulkSendStatus'])->name('whatsapp.bulkSendStatus');
 });
