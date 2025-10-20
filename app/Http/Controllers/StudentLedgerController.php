@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\StudentLedger;
+use App\Models\StudentLedgerDeletion;
 use App\Models\Enrollment;
 use App\Models\Student;
 use App\Http\Resources\StudentLedgerResource;
@@ -241,5 +242,97 @@ class StudentLedgerController extends Controller
 
         // Output PDF
         $pdf->Output($filename, 'I');
+    }
+
+    /**
+     * Delete a ledger entry and log it.
+     */
+    public function destroy(Request $request, $ledgerEntryId): JsonResponse
+    {
+        $request->validate([
+            'deletion_reason' => 'required|string|max:500',
+        ]);
+
+        $ledgerEntry = StudentLedger::with(['createdBy'])->findOrFail($ledgerEntryId);
+
+        try {
+            DB::beginTransaction();
+
+            // Log the deletion with all original data
+            StudentLedgerDeletion::create([
+                'ledger_entry_id' => $ledgerEntry->id,
+                'enrollment_id' => $ledgerEntry->enrollment_id,
+                'student_id' => $ledgerEntry->student_id,
+                'transaction_type' => $ledgerEntry->transaction_type,
+                'description' => $ledgerEntry->description,
+                'amount' => $ledgerEntry->amount,
+                'transaction_date' => $ledgerEntry->transaction_date,
+                'balance_before' => $ledgerEntry->balance_before ?? 0,
+                'balance_after' => $ledgerEntry->balance_after ?? 0,
+                'reference_number' => $ledgerEntry->reference_number,
+                'payment_method' => $ledgerEntry->payment_method,
+                'metadata' => $ledgerEntry->metadata,
+                'original_created_by' => $ledgerEntry->created_by,
+                'original_created_at' => $ledgerEntry->created_at,
+                'deleted_by' => Auth::id(),
+                'deletion_reason' => $request->deletion_reason,
+                'deleted_at' => now(),
+            ]);
+
+            // Delete the entry
+            $ledgerEntry->delete();
+
+            // Note: No recalculation/update on student_ledgers as requested
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Ledger entry deleted successfully',
+                'new_balance' => StudentLedger::getCurrentBalance($ledgerEntry->enrollment_id),
+            ], 200);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Failed to delete ledger entry',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Recalculate balances for all entries in an enrollment.
+     */
+    private function recalculateBalances($enrollmentId): void
+    {
+        $entries = StudentLedger::where('enrollment_id', $enrollmentId)
+            ->orderBy('transaction_date', 'asc')
+            ->orderBy('id', 'asc')
+            ->get();
+
+        $runningBalance = 0;
+
+        foreach ($entries as $entry) {
+            $entry->balance_before = $runningBalance;
+
+            // Determine impact on balance
+            switch ($entry->transaction_type) {
+                case StudentLedger::TYPE_FEE:
+                    $runningBalance += $entry->amount;
+                    break;
+                case StudentLedger::TYPE_PAYMENT:
+                case StudentLedger::TYPE_DISCOUNT:
+                case StudentLedger::TYPE_REFUND:
+                    $runningBalance -= $entry->amount;
+                    break;
+                case StudentLedger::TYPE_ADJUSTMENT:
+                    // For adjustments, check metadata or assume additive
+                    $runningBalance += $entry->amount;
+                    break;
+            }
+
+            $entry->balance_after = $runningBalance;
+            $entry->save();
+        }
     }
 }

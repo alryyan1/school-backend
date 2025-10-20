@@ -5,6 +5,7 @@ use App\Http\Controllers\StudentController;
 use App\Http\Controllers\StudentFeePaymentController;
 use App\Http\Controllers\StudentWarningController;
 use App\Http\Controllers\StudentNoteController;
+use App\Http\Controllers\TeacherController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ExpenseController;
 
@@ -62,3 +63,7 @@ Route::get('/enrollments/{enrollment}/fee-statement-pdf', [FeeInstallmentControl
     // --- Student Enrollment Notes PDF (web route to open in new tab) ---
     Route::get('/student-notes/pdf', [StudentNoteController::class, 'generatePdf'])
          ->name('student-notes.web.pdf');
+
+    // --- Teacher Profile PDF (web route to open in new tab) ---
+    Route::get('/teachers/{teacher}/pdf', [TeacherController::class, 'pdfWeb'])
+         ->name('teachers.web.pdf');

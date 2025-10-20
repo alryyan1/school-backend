@@ -9,6 +9,7 @@ use App\Http\Resources\TeacherResource; // Import the resource
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage; // Import Storage
 use Illuminate\Validation\Rule; // For unique validation on update
+use TCPDF; // TCPDF for PDF generation
 
 class TeacherController extends Controller
 {
@@ -342,5 +343,258 @@ class TeacherController extends Controller
         return response()->json([
             'files' => $files,
         ]);
+    }
+
+    /**
+     * Web endpoint: generate and stream a PDF profile for the teacher using TCPDF.
+     */
+    public function pdfWeb(Teacher $teacher)
+    {
+        // Helpers
+        $show = function ($value) {
+            return ($value === null || $value === '') ? 'غير محدد' : (is_bool($value) ? ($value ? 'نعم' : 'لا') : (string) $value);
+        };
+        $formatDate = function ($date) use ($show) {
+            if ($date instanceof \Carbon\Carbon) {
+                return $date->format('d/m/Y');
+            }
+            return $show($date);
+        };
+
+        // Resolve absolute path for photo if exists
+        $photoAbsPath = null;
+        if (!empty($teacher->photo)) {
+            $candidate = public_path('storage/' . $teacher->photo);
+            if (is_string($candidate) && file_exists($candidate)) {
+                $photoAbsPath = $candidate;
+            }
+        }
+
+        // Check for school logo
+        $logoPath = public_path('logo.png');
+        $logoExists = file_exists($logoPath);
+
+		// Create new PDF document with custom header/footer (override Header/Footer)
+		$pdf = new class($teacher, $logoExists, $logoPath) extends TCPDF {
+			private Teacher $teacher;
+			private bool $logoExists;
+			private string $logoPath;
+			public function __construct(Teacher $teacher, bool $logoExists, string $logoPath) {
+				parent::__construct(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
+				$this->teacher = $teacher;
+				$this->logoExists = $logoExists;
+				$this->logoPath = $logoPath;
+			}
+			public function Header(): void {
+				$this->SetY(10);
+				$this->SetFont('arial', 'B', 14);
+				if ($this->logoExists) {
+					$this->Image($this->logoPath, 55, 0, 50, 40, 'PNG');
+				}
+				$this->SetTextColor(31, 78, 121);
+				$this->Cell(0, 8, 'مدارس الفنار', 0, 1, 'C');
+				$this->SetFont('arial', '', 10);
+				$this->SetTextColor(100, 100, 100);
+				$this->Cell(0, 6, 'ملف المدرس - ' . $this->teacher->name, 0, 1, 'C');
+				$this->SetTextColor(0, 0, 0);
+				// Line separator
+				$this->SetLineStyle(['width' => 0.5, 'color' => [31, 78, 121]]);
+				$this->Line(15, 32, 195, 32);
+			}
+			public function Footer(): void {
+				$this->SetY(-15);
+				$this->SetFont('arial', 'I', 8);
+				$this->SetTextColor(100, 100, 100);
+				// Line separator
+				$this->SetLineStyle(['width' => 0.3, 'color' => [200, 200, 200]]);
+				$this->Line(15, $this->GetY() - 2, 195, $this->GetY() - 2);
+				$this->Cell(0, 10, 'تاريخ الطباعة: ' . date('Y/m/d H:i') . ' | الصفحة ' . $this->getAliasNumPage() . ' من ' . $this->getAliasNbPages(), 0, 0, 'C');
+			}
+		};
+
+        // Document meta
+        $pdf->SetCreator('نظام إدارة المدرسة');
+        $pdf->SetAuthor('نظام إدارة المدرسة');
+        $pdf->SetTitle('ملف المدرس - ' . $teacher->name);
+        $pdf->SetSubject('ملف المدرس');
+
+		// Header/Footer will be rendered by overridden methods
+
+        $pdf->setPrintHeader(true);
+        $pdf->setPrintFooter(true);
+
+        // RTL and font for Arabic
+        $pdf->setRTL(true);
+        $pdf->SetFont('arial', '', 10);
+
+        // Margins
+        $pdf->SetMargins(15, 38, 15);
+        $pdf->SetHeaderMargin(5);
+        $pdf->SetFooterMargin(10);
+        $pdf->SetAutoPageBreak(true, 20);
+
+        // Add a page
+        $pdf->AddPage();
+
+        // Color scheme
+        $primaryColor = '#1F4E79';
+        $secondaryColor = '#5B9BD5';
+        $lightBg = '#F2F2F2';
+        $successColor = '#70AD47';
+        $dangerColor = '#C00000';
+
+        // Header Card with Photo
+        $statusColor = $teacher->is_active ? $successColor : $dangerColor;
+        $statusText = $teacher->is_active ? 'نشط' : 'غير نشط';
+        
+        $headerCard = '<table width="100%" cellspacing="0" cellpadding="12" style="background-color:' . $lightBg . '; border-radius:8px; margin-bottom:15px;">
+            <tr>
+                <td width="75%" style="vertical-align:middle;">
+                    <h2 style="margin:0; color:' . $primaryColor . '; font-size:18px;">' . e($teacher->name ?? 'غير محدد') . '</h2>
+                    <p style="margin:4px 0 0 0; color:#666; font-size:11px;">
+                        <b>الرقم الوطني:</b> ' . e($teacher->national_id ?? 'غير محدد') . ' | 
+                        <b>رقم المعرف:</b> ' . e($teacher->id) . ' | 
+                        <b>الحالة:</b> <span style="color:' . $statusColor . '; font-weight:bold;">' . $statusText . '</span>
+                    </p>
+                </td>
+                <td width="25%" style="text-align:left; vertical-align:middle;">';
+        
+        if ($photoAbsPath) {
+            $headerCard .= '<img src="' . $photoAbsPath . '" width="80" height="80" style="border:3px solid ' . $primaryColor . '; border-radius:8px;" />';
+        } else {
+            $headerCard .= '<div style="width:80px; height:80px; background-color:#ddd; border:3px solid ' . $primaryColor . '; border-radius:8px; display:flex; align-items:center; justify-content:center; color:#999; font-size:10px;">لا توجد صورة</div>';
+        }
+        
+        $headerCard .= '</td>
+            </tr>
+        </table>';
+        $pdf->writeHTML($headerCard, true, false, true, false, 'R');
+
+		// CSS for sections
+		$sectionHeaderStyle = 'background-color:' . $secondaryColor . '; color:#fff; padding:8px; font-size:12px; font-weight:bold; margin-top:8px; border-radius:4px;';
+		// Ensure row cells do not exceed available width: 20% label + 30% value + 20% label + 30% value = 100%
+		$tableCellLabel = 'background-color:' . $lightBg . '; font-weight:bold; padding:6px; border:1px solid #ddd; width:20%;';
+		$tableCellValue = 'padding:6px; border:1px solid #ddd; width:30%;';
+		// Wrapper to allow long words to break within value cells
+		$wrapOpen = '<span style="word-break:break-word; white-space:normal; display:block;">';
+		$wrapClose = '</span>';
+
+        // Section: Basic Information
+		$basicHtml = '<div style="' . $sectionHeaderStyle . '">المعلومات الأساسية</div>
+          <table cellspacing="0" cellpadding="0" width="100%" style="margin-top:5px;">
+            <tr>
+              <td style="' . $tableCellLabel . '">الاسم الكامل</td>
+			  <td style="' . $tableCellValue . '">' . $wrapOpen . e($show($teacher->name)) . $wrapClose . '</td>
+              <td style="' . $tableCellLabel . '">الرقم الوطني</td>
+			  <td style="' . $tableCellValue . '">' . $wrapOpen . e($show($teacher->national_id)) . $wrapClose . '</td>
+            </tr>
+            <tr>
+              <td style="' . $tableCellLabel . '">الجنس</td>
+			  <td style="' . $tableCellValue . '">' . $wrapOpen . e($show($teacher->gender)) . $wrapClose . '</td>
+              <td style="' . $tableCellLabel . '">البريد الإلكتروني</td>
+			  <td style="' . $tableCellValue . '">' . $wrapOpen . e($show($teacher->email)) . $wrapClose . '</td>
+            </tr>
+          </table>';
+        $pdf->writeHTML($basicHtml, true, false, true, false, 'R');
+
+        // Section: Contact
+		$contactHtml = '<div style="' . $sectionHeaderStyle . '">بيانات التواصل</div>
+          <table cellspacing="0" cellpadding="0" width="100%" style="margin-top:5px;">
+            <tr>
+              <td style="' . $tableCellLabel . '">رقم الهاتف</td>
+			  <td style="' . $tableCellValue . '">' . $wrapOpen . e($show($teacher->phone)) . $wrapClose . '</td>
+              <td style="' . $tableCellLabel . '">هاتف آخر</td>
+			  <td style="' . $tableCellValue . '">' . $wrapOpen . e($show($teacher->secondary_phone)) . $wrapClose . '</td>
+            </tr>
+            <tr>
+              <td style="' . $tableCellLabel . '">رقم الواتساب</td>
+			  <td style="' . $tableCellValue . '">' . $wrapOpen . e($show($teacher->whatsapp_number)) . $wrapClose . '</td>
+              <td style="' . $tableCellLabel . '">العنوان</td>
+			  <td style="' . $tableCellValue . '">' . $wrapOpen . e($show($teacher->address)) . $wrapClose . '</td>
+            </tr>
+          </table>';
+        $pdf->writeHTML($contactHtml, true, false, true, false, 'R');
+
+        // Section: Personal
+		$personalHtml = '<div style="' . $sectionHeaderStyle . '">البيانات الشخصية</div>
+          <table cellspacing="0" cellpadding="0" width="100%" style="margin-top:5px;">
+            <tr>
+              <td style="' . $tableCellLabel . '">تاريخ الميلاد</td>
+			  <td style="' . $tableCellValue . '">' . $wrapOpen . e($formatDate($teacher->birth_date)) . $wrapClose . '</td>
+              <td style="' . $tableCellLabel . '">مكان الميلاد</td>
+			  <td style="' . $tableCellValue . '">' . $wrapOpen . e($show($teacher->place_of_birth)) . $wrapClose . '</td>
+            </tr>
+            <tr>
+              <td style="' . $tableCellLabel . '">الجنسية</td>
+			  <td style="' . $tableCellValue . '">' . $wrapOpen . e($show($teacher->nationality)) . $wrapClose . '</td>
+              <td style="' . $tableCellLabel . '">نوع الوثيقة</td>
+			  <td style="' . $tableCellValue . '">' . $wrapOpen . e($show($teacher->document_type)) . $wrapClose . '</td>
+            </tr>
+            <tr>
+              <td style="' . $tableCellLabel . '">رقم الوثيقة</td>
+			  <td style="' . $tableCellValue . '">' . $wrapOpen . e($show($teacher->document_number)) . $wrapClose . '</td>
+              <td style="' . $tableCellLabel . '">الحالة الاجتماعية</td>
+			  <td style="' . $tableCellValue . '">' . $wrapOpen . e($show($teacher->marital_status)) . $wrapClose . '</td>
+            </tr>
+            <tr>
+              <td style="' . $tableCellLabel . '">عدد الأطفال</td>
+			  <td style="' . $tableCellValue . '">' . $wrapOpen . e($show($teacher->number_of_children)) . $wrapClose . '</td>
+              <td style="' . $tableCellLabel . '">أطفال بالمدرسة</td>
+			  <td style="' . $tableCellValue . '">' . $wrapOpen . e($show($teacher->children_in_school)) . $wrapClose . '</td>
+            </tr>
+          </table>';
+        $pdf->writeHTML($personalHtml, true, false, true, false, 'R');
+
+        // Section: Education
+		$eduHtml = '<div style="' . $sectionHeaderStyle . '">المؤهلات العلمية</div>
+          <table cellspacing="0" cellpadding="0" width="100%" style="margin-top:5px;">
+            <tr>
+              <td style="' . $tableCellLabel . '">المؤهل العلمي</td>
+			  <td style="' . $tableCellValue . '">' . $wrapOpen . e($show($teacher->qualification)) . $wrapClose . '</td>
+              <td style="' . $tableCellLabel . '">أعلى مؤهل</td>
+			  <td style="' . $tableCellValue . '">' . $wrapOpen . e($show($teacher->highest_qualification)) . $wrapClose . '</td>
+            </tr>
+            <tr>
+              <td style="' . $tableCellLabel . '">الدرجة العلمية</td>
+			  <td style="' . $tableCellValue . '">' . $wrapOpen . e($show($teacher->academic_degree)) . $wrapClose . '</td>
+              <td style="' . $tableCellLabel . '">التخصص</td>
+			  <td style="' . $tableCellValue . '">' . $wrapOpen . e($show($teacher->specialization)) . $wrapClose . '</td>
+            </tr>
+          </table>';
+        $pdf->writeHTML($eduHtml, true, false, true, false, 'R');
+
+        // Section: Experience
+		$expHtml = '<div style="' . $sectionHeaderStyle . '">الخبرة الوظيفية</div>
+          <table cellspacing="0" cellpadding="0" width="100%" style="margin-top:5px;">
+            <tr>
+              <td style="' . $tableCellLabel . '">تاريخ التعيين</td>
+			  <td style="' . $tableCellValue . '">' . $wrapOpen . e($formatDate($teacher->hire_date)) . $wrapClose . '</td>
+              <td style="' . $tableCellLabel . '">تاريخ التعيين بالمدرسة</td>
+			  <td style="' . $tableCellValue . '">' . $wrapOpen . e($formatDate($teacher->appointment_date)) . $wrapClose . '</td>
+            </tr>
+            <tr>
+              <td style="' . $tableCellLabel . '">سنوات الخبرة</td>
+			  <td style="' . $tableCellValue . '">' . $wrapOpen . e($show($teacher->years_of_teaching_experience)) . $wrapClose . '</td>
+              <td style="' . $tableCellLabel . '">الدورات التدريبية</td>
+			  <td style="' . $tableCellValue . '">' . $wrapOpen . e($show($teacher->training_courses)) . $wrapClose . '</td>
+            </tr>
+          </table>';
+        $pdf->writeHTML($expHtml, true, false, true, false, 'R');
+
+        // Section: System Meta
+		$metaHtml = '<div style="' . $sectionHeaderStyle . '">بيانات النظام</div>
+          <table cellspacing="0" cellpadding="0" width="100%" style="margin-top:5px;">
+            <tr>
+              <td style="' . $tableCellLabel . '">تاريخ الإنشاء</td>
+			  <td style="' . $tableCellValue . '">' . $wrapOpen . e($formatDate($teacher->created_at)) . $wrapClose . '</td>
+              <td style="' . $tableCellLabel . '">آخر تحديث</td>
+			  <td style="' . $tableCellValue . '">' . $wrapOpen . e($formatDate($teacher->updated_at)) . $wrapClose . '</td>
+            </tr>
+          </table>';
+        $pdf->writeHTML($metaHtml, true, false, true, false, 'R');
+
+        // Output PDF inline to the browser
+        return response($pdf->Output('teacher-' . $teacher->id . '.pdf', 'I'))
+            ->header('Content-Type', 'application/pdf');
     }
 }

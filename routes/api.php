@@ -150,6 +150,13 @@ Route::prefix('student-ledgers')->group(function () {
     Route::post('/', [\App\Http\Controllers\StudentLedgerController::class, 'store']);
     Route::post('/summary', [\App\Http\Controllers\StudentLedgerController::class, 'summary']);
     Route::get('/student/{studentId}', [\App\Http\Controllers\StudentLedgerController::class, 'studentLedger']);
+    Route::delete('/{ledgerEntryId}', [\App\Http\Controllers\StudentLedgerController::class, 'destroy']);
+});
+
+    // --- STUDENT LEDGER DELETION ROUTES ---
+Route::prefix('student-ledger-deletions')->group(function () {
+    Route::get('/', [\App\Http\Controllers\StudentLedgerDeletionController::class, 'index']);
+    Route::get('/{id}', [\App\Http\Controllers\StudentLedgerDeletionController::class, 'show']);
 });
     
     // --- FEE INSTALLMENT ROUTES ---
