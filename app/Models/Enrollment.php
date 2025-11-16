@@ -61,6 +61,9 @@ class Enrollment extends Model
         'enrollment_type',
         'fees',
         'discount',
+        'deportation',
+        'deportation_type',
+        'deportation_path_id',
     ];
 
     // Optional: Cast status if you create a PHP Enum later
@@ -108,4 +111,9 @@ class Enrollment extends Model
         {
             return $this->hasMany(StudentNote::class);
         }
+
+    public function deportationPath(): BelongsTo
+    {
+        return $this->belongsTo(DeportationPath::class, 'deportation_path_id');
+    }
 }

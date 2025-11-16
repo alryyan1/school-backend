@@ -162,6 +162,13 @@ class StudentController extends Controller
             });
         }
 
+        // Only deportation enrollments filter
+        if ($request->boolean('only_deportation')) {
+            $query->whereHas('enrollments', function ($q) {
+                $q->where('deportation', true);
+            });
+        }
+
         // Sorting
         $sortBy = $request->get('sort_by', 'id');
         $sortOrder = $request->get('sort_order', 'desc');

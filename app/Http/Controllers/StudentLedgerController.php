@@ -201,6 +201,61 @@ class StudentLedgerController extends Controller
     }
 
     /**
+     * Get ledger entries filtered by payment method and date range.
+     */
+    public function byPaymentMethod(Request $request): JsonResponse
+    {
+        try {
+            $request->validate([
+                'payment_method' => ['required', Rule::in([
+                    StudentLedger::PAYMENT_METHOD_CASH,
+                    StudentLedger::PAYMENT_METHOD_BANAK,
+                    StudentLedger::PAYMENT_METHOD_FAWRI,
+                    StudentLedger::PAYMENT_METHOD_OCASH,
+                ])],
+                'start_date' => 'nullable|date',
+                'end_date' => 'nullable|date|after_or_equal:start_date',
+            ]);
+
+            $query = StudentLedger::where('payment_method', $request->payment_method)
+                ->with(['enrollment.student', 'enrollment.school', 'enrollment.gradeLevel', 'enrollment.classroom', 'createdBy'])
+                ->orderBy('transaction_date', 'asc')
+                ->orderBy('id', 'asc');
+
+            if ($request->start_date) {
+                $query->where('transaction_date', '>=', $request->start_date);
+            }
+
+            if ($request->end_date) {
+                $query->where('transaction_date', '<=', $request->end_date);
+            }
+
+            $ledgerEntries = $query->get();
+
+            $totalAmount = $ledgerEntries->sum('amount');
+
+            return response()->json([
+                'data' => StudentLedgerResource::collection($ledgerEntries),
+                'total' => $ledgerEntries->count(),
+                'summary' => [
+                    'total_amount' => $totalAmount,
+                    'total_entries' => $ledgerEntries->count(),
+                ]
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error in byPaymentMethod: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'request' => $request->all()
+            ]);
+            
+            return response()->json([
+                'message' => 'Failed to fetch ledger entries',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Generate PDF for student ledger.
      */
     public function generatePdf(Request $request, $enrollmentId)

@@ -32,6 +32,7 @@ use App\Http\Controllers\StudentNoteController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\ExpenseCategoryController;
 use App\Http\Controllers\UltramsgController;
+use App\Http\Controllers\DeportationPathController;
 
 /*
 |--------------------------------------------------------------------------
@@ -125,12 +126,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('/classrooms', ClassroomController::class); // <-- Add this
     // --- ENROLLMENT ROUTES ---
     Route::apiResource('/enrollments', EnrollmentController::class);
+    Route::apiResource('/deportation-paths', DeportationPathController::class);
     Route::get('/enrollable-students', [EnrollmentController::class, 'getEnrollableStudents']);
     Route::get('/enrollments/search', [EnrollmentController::class, 'search']);
     Route::get('/unassigned-students-for-grade', [EnrollmentController::class, 'getUnassignedStudentsForGrade']);
     Route::get('/assigned-students-for-grade', [EnrollmentController::class, 'getAssignedStudentsForGrade']);
     Route::put('/enrollments/{enrollment}/assign-classroom', [EnrollmentController::class, 'assignToClassroom']);
     Route::put('/enrollments/{enrollment}/change-type', [EnrollmentController::class, 'changeEnrollmentType']);
+    Route::put('/enrollments/{enrollment}/deportation', [EnrollmentController::class, 'updateDeportation']);
     
     // Enrollment logs routes
     Route::get('/enrollments/{enrollment}/logs', [EnrollmentController::class, 'getLogs']);
@@ -150,7 +153,16 @@ Route::prefix('student-ledgers')->group(function () {
     Route::post('/', [\App\Http\Controllers\StudentLedgerController::class, 'store']);
     Route::post('/summary', [\App\Http\Controllers\StudentLedgerController::class, 'summary']);
     Route::get('/student/{studentId}', [\App\Http\Controllers\StudentLedgerController::class, 'studentLedger']);
+    Route::get('/by-payment-method', [\App\Http\Controllers\StudentLedgerController::class, 'byPaymentMethod']);
     Route::delete('/{ledgerEntryId}', [\App\Http\Controllers\StudentLedgerController::class, 'destroy']);
+});
+
+    // --- STUDENT DEPORTATION LEDGER ROUTES ---
+Route::prefix('student-deportation-ledgers')->group(function () {
+    Route::get('/enrollment/{enrollmentId}', [\App\Http\Controllers\StudentDeportationLedgerController::class, 'show']);
+    Route::post('/', [\App\Http\Controllers\StudentDeportationLedgerController::class, 'store']);
+    Route::post('/summary', [\App\Http\Controllers\StudentDeportationLedgerController::class, 'summary']);
+    Route::get('/student/{studentId}', [\App\Http\Controllers\StudentDeportationLedgerController::class, 'studentLedger']);
 });
 
     // --- STUDENT LEDGER DELETION ROUTES ---

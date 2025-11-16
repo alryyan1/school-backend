@@ -819,6 +819,47 @@ class EnrollmentController extends Controller
     }
 
     /**
+     * Update deportation subscription for a specific enrollment.
+     */
+    public function updateDeportation(Request $request, Enrollment $enrollment)
+    {
+        $validator = Validator::make($request->all(), [
+            'deportation' => 'required|boolean',
+            'deportation_type' => ['nullable', Rule::in(['داخلي', 'خارجي'])],
+            'deportation_path_id' => 'nullable|exists:deportation_paths,id',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['message' => 'خطأ في التحقق', 'errors' => $validator->errors()], 422);
+        }
+
+        $validatedData = $validator->validated();
+
+        // Store old values for logging
+        $oldData = [
+            'old_deportation' => $enrollment->deportation,
+            'old_deportation_type' => $enrollment->deportation_type,
+            'old_deportation_path_id' => $enrollment->deportation_path_id,
+        ];
+
+        // If deportation is false, clear related fields
+        if (!$validatedData['deportation']) {
+            $validatedData['deportation_type'] = null;
+            $validatedData['deportation_path_id'] = null;
+        }
+
+        $enrollment->update($validatedData);
+
+        // Log the change
+        $this->logEnrollmentChanges($enrollment, $validatedData, $oldData);
+
+        return response()->json([
+            'message' => 'تم تحديث اشتراك الترحيل بنجاح',
+            'enrollment' => new EnrollmentResource($enrollment->load(['student', 'gradeLevel', 'classroom', 'school', 'deportationPath']))
+        ], 200);
+    }
+
+    /**
      * Get human-readable status label.
      */
     private function getStatusLabel(string $status): string
