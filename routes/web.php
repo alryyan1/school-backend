@@ -48,6 +48,10 @@ Route::get('/enrollments/{enrollment}/fee-statement-pdf', [FeeInstallmentControl
     Route::get('/student-ledgers/enrollment/{enrollmentId}/pdf', [\App\Http\Controllers\StudentLedgerController::class, 'generatePdf'])
          ->name('student-ledgers.pdf');
 
+    // --- Student Deportation Ledger PDF (web route for direct access) ---
+    Route::get('/student-deportation-ledgers/enrollment/{enrollmentId}/pdf', [\App\Http\Controllers\StudentDeportationLedgerController::class, 'generatePdf'])
+         ->name('student-deportation-ledgers.pdf');
+
     // --- Ledger by Payment Method PDF and Excel ---
     Route::get('/student-ledgers/by-payment-method/pdf', [\App\Http\Controllers\StudentLedgerController::class, 'generatePdfByPaymentMethod'])
          ->name('student-ledgers.by-payment-method.pdf');
@@ -62,9 +66,21 @@ Route::get('/enrollments/{enrollment}/fee-statement-pdf', [FeeInstallmentControl
     Route::get('/reports/revenues-excel', [StudentController::class, 'exportRevenuesExcel'])
          ->name('reports.revenues.excel');
 
+    // --- Deportation Revenues PDF (web route to open in new tab) ---
+    Route::get('/reports/deportation-revenues', [StudentController::class, 'deportationRevenuesPdf'])
+         ->name('reports.deportation-revenues.pdf');
+
+    // --- Deportation Revenues Excel (web route to download Excel file) ---
+    Route::get('/reports/deportation-revenues-excel', [StudentController::class, 'exportDeportationRevenuesExcel'])
+         ->name('reports.deportation-revenues.excel');
+
     // --- Expenses PDF (web route to open in new tab) ---
     Route::get('/reports/expenses', [ExpenseController::class, 'pdfWeb'])
          ->name('reports.expenses.pdf');
+
+    // --- Expenses Excel (web route to download Excel file) ---
+    Route::get('/reports/expenses-excel', [ExpenseController::class, 'exportExcel'])
+         ->name('reports.expenses.excel');
 
     // --- Student Enrollment Notes PDF (web route to open in new tab) ---
     Route::get('/student-notes/pdf', [StudentNoteController::class, 'generatePdf'])

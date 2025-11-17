@@ -116,4 +116,9 @@ class Enrollment extends Model
     {
         return $this->belongsTo(DeportationPath::class, 'deportation_path_id');
     }
+
+    public function deportationLedgers(): HasMany
+    {
+        return $this->hasMany(StudentDeportationLedger::class, 'enrollment_id', 'id');
+    }
 }

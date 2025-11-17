@@ -6,6 +6,7 @@ use App\Models\StudentDeportationLedger;
 use App\Models\Enrollment;
 use App\Models\Student;
 use App\Http\Resources\StudentDeportationLedgerResource;
+use App\Helpers\StudentDeportationLedgerPdf;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -143,23 +144,41 @@ class StudentDeportationLedgerController extends Controller
 
         $summary = $query->selectRaw('
                 enrollment_id,
-                SUM(CASE WHEN transaction_type = "fee" THEN amount ELSE 0 END) as total_fees,
-                SUM(CASE WHEN transaction_type = "payment" THEN ABS(amount) ELSE 0 END) as total_payments,
-                SUM(CASE WHEN transaction_type = "discount" THEN amount ELSE 0 END) as total_discounts,
-                SUM(CASE WHEN transaction_type = "refund" THEN amount ELSE 0 END) as total_refunds,
-                SUM(CASE WHEN transaction_type = "adjustment" THEN amount ELSE 0 END) as total_adjustments
+                COALESCE(SUM(CASE WHEN transaction_type = "fee" THEN amount ELSE 0 END), 0) as total_fees,
+                COALESCE(SUM(CASE WHEN transaction_type = "payment" THEN ABS(amount) ELSE 0 END), 0) as total_payments,
+                COALESCE(SUM(CASE WHEN transaction_type = "discount" THEN amount ELSE 0 END), 0) as total_discounts,
+                COALESCE(SUM(CASE WHEN transaction_type = "refund" THEN amount ELSE 0 END), 0) as total_refunds,
+                COALESCE(SUM(CASE WHEN transaction_type = "adjustment" THEN amount ELSE 0 END), 0) as total_adjustments
             ')
             ->groupBy('enrollment_id')
             ->get();
 
+        // Ensure all requested enrollment_ids are in the response, even if they have no ledger entries
+        $summaryMap = $summary->keyBy('enrollment_id');
+        $result = [];
+        foreach ($request->enrollment_ids as $enrollmentId) {
+            if ($summaryMap->has($enrollmentId)) {
+                $result[] = $summaryMap->get($enrollmentId);
+            } else {
+                $result[] = (object)[
+                    'enrollment_id' => (int)$enrollmentId,
+                    'total_fees' => 0,
+                    'total_payments' => 0,
+                    'total_discounts' => 0,
+                    'total_refunds' => 0,
+                    'total_adjustments' => 0,
+                ];
+            }
+        }
+
         return response()->json([
-            'summary' => $summary,
+            'summary' => $result,
             'grand_total' => [
-                'fees' => $summary->sum('total_fees'),
-                'payments' => $summary->sum('total_payments'),
-                'discounts' => $summary->sum('total_discounts'),
-                'refunds' => $summary->sum('total_refunds'),
-                'adjustments' => $summary->sum('total_adjustments'),
+                'fees' => collect($result)->sum('total_fees'),
+                'payments' => collect($result)->sum('total_payments'),
+                'discounts' => collect($result)->sum('total_discounts'),
+                'refunds' => collect($result)->sum('total_refunds'),
+                'adjustments' => collect($result)->sum('total_adjustments'),
             ]
         ]);
     }
@@ -196,6 +215,55 @@ class StudentDeportationLedgerController extends Controller
                 'total' => $ledgerEntries->total(),
             ]
         ]);
+    }
+
+    /**
+     * Generate PDF for student deportation ledger.
+     */
+    public function generatePdf(Request $request, $enrollmentId)
+    {
+        $request->validate([
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+        ]);
+
+        $enrollment = Enrollment::with(['student', 'school', 'gradeLevel', 'classroom'])
+            ->findOrFail($enrollmentId);
+
+        $query = StudentDeportationLedger::where('enrollment_id', $enrollmentId)
+            ->with(['createdBy'])
+            ->orderBy('transaction_date', 'desc')
+            ->orderBy('id', 'desc');
+
+        if ($request->start_date) {
+            $query->where('transaction_date', '>=', $request->start_date);
+        }
+
+        if ($request->end_date) {
+            $query->where('transaction_date', '<=', $request->end_date);
+        }
+
+        $ledgerEntries = $query->get();
+        $currentBalance = StudentDeportationLedger::getCurrentBalance($enrollmentId);
+
+        $summary = [
+            'total_fees' => $ledgerEntries->where('transaction_type', 'fee')->sum('amount'),
+            'total_payments' => $ledgerEntries->where('transaction_type', 'payment')->sum('amount'),
+            'total_discounts' => $ledgerEntries->where('transaction_type', 'discount')->sum('amount'),
+            'total_refunds' => $ledgerEntries->where('transaction_type', 'refund')->sum('amount'),
+            'total_adjustments' => $ledgerEntries->where('transaction_type', 'adjustment')->sum('amount'),
+        ];
+
+        // Create PDF using dedicated deportation ledger PDF helper
+        $pdf = new StudentDeportationLedgerPdf($enrollment, $ledgerEntries, $summary, $currentBalance);
+        $pdf->generateLedger();
+
+        // Generate filename
+        $filename = 'student_deportation_ledger_' . ($enrollment->student->student_name ?? 'unknown') . '_' . date('Y-m-d') . '.pdf';
+        $filename = preg_replace('/[^a-zA-Z0-9_-]/', '_', $filename);
+
+        // Output PDF
+        $pdf->Output($filename, 'I');
     }
 }
 

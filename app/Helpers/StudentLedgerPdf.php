@@ -46,6 +46,8 @@ class StudentLedgerPdf extends TCPDF
     protected $currency;
     protected $dateFormat;
     protected $fontFamily;
+    protected $headerTitleAr;
+    protected $headerTitleEn;
 
     public function __construct($enrollment, $ledgerEntries, $summary, $currentBalance, array $options = [])
     {
@@ -59,6 +61,8 @@ class StudentLedgerPdf extends TCPDF
         $this->currency = $options['currency'] ?? self::DEFAULT_CURRENCY;
         $this->dateFormat = $options['date_format'] ?? self::DEFAULT_DATE_FORMAT;
         $this->isRtl = $options['rtl'] ?? self::DEFAULT_IS_RTL;
+        $this->headerTitleAr = $options['header_title_ar'] ?? self::DEFAULT_HEADER_TITLE_AR;
+        $this->headerTitleEn = $options['header_title_en'] ?? self::DEFAULT_HEADER_TITLE_EN;
 
         $this->initializeDocumentMetadata();
         $this->initializeLayout();
@@ -69,7 +73,7 @@ class StudentLedgerPdf extends TCPDF
     {
         // Title
         $this->SetFont($this->fontFamily, 'B', self::DEFAULT_TITLE_FONT_SIZE);
-        $this->Cell(0, 15, self::DEFAULT_HEADER_TITLE_AR, 0, false, 'C', 0, '', 0, false, 'M', 'M');
+        $this->Cell(0, 15, $this->headerTitleAr, 0, false, 'C', 0, '', 0, false, 'M', 'M');
         $this->Ln(8);
 
         $this->renderHeaderStudentInfo();
@@ -116,9 +120,9 @@ class StudentLedgerPdf extends TCPDF
         $studentName = $this->enrollment->student->student_name ?? 'غير محدد';
         $this->SetCreator('School Management System');
         $this->SetAuthor('School Management System');
-        $this->SetTitle(self::DEFAULT_HEADER_TITLE_AR . ' - ' . $studentName);
-        $this->SetSubject(self::DEFAULT_HEADER_TITLE_EN);
-        $this->SetHeaderData('', 0, self::DEFAULT_HEADER_TITLE_AR, self::DEFAULT_HEADER_TITLE_EN);
+        $this->SetTitle($this->headerTitleAr . ' - ' . $studentName);
+        $this->SetSubject($this->headerTitleEn);
+        $this->SetHeaderData('', 0, $this->headerTitleAr, $this->headerTitleEn);
     }
 
     private function initializeLayout(): void

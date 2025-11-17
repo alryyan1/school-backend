@@ -14,6 +14,8 @@ use TCPDF_FONTS;
 use App\Helpers\TermsConditionsPdf;
 use App\Helpers\RevenueListPdf;
 use App\Models\StudentLedger;
+use App\Models\StudentDeportationLedger;
+use App\Models\DeportationPath;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
@@ -56,6 +58,7 @@ class StudentController extends Controller
             'enrollments.gradeLevel',
             'enrollments.classroom',
             'enrollments.feeInstallments',
+            'enrollments.deportationPath',
             'approvedByUser'
         );
 
@@ -82,6 +85,16 @@ class StudentController extends Controller
                           $en->where('id', $numeric);
                       });
             }
+        }
+
+        // Reference number filter - search by ledger reference_number
+        if ($request->filled('reference_number')) {
+            $referenceNumber = trim((string) $request->get('reference_number'));
+            $query->whereHas('enrollments', function ($en) use ($referenceNumber) {
+                $en->whereHas('studentLedgers', function ($ledger) use ($referenceNumber) {
+                    $ledger->where('reference_number', 'like', "%{$referenceNumber}%");
+                });
+            });
         }
 
         // Wished school filter
@@ -166,6 +179,20 @@ class StudentController extends Controller
         if ($request->boolean('only_deportation')) {
             $query->whereHas('enrollments', function ($q) {
                 $q->where('deportation', true);
+            });
+        }
+
+        // Deportation path filter
+        if ($request->filled('deportation_path_id')) {
+            $query->whereHas('enrollments', function ($q) use ($request) {
+                $q->where('deportation_path_id', $request->get('deportation_path_id'));
+            });
+        }
+
+        // Deportation type filter
+        if ($request->filled('deportation_type')) {
+            $query->whereHas('enrollments', function ($q) use ($request) {
+                $q->where('deportation_type', $request->get('deportation_type'));
             });
         }
 
@@ -526,6 +553,7 @@ class StudentController extends Controller
             'enrollments.gradeLevel',
             'enrollments.classroom',
             'enrollments.feeInstallments',
+            'enrollments.deportationPath',
             'approvedByUser',
         ]);
         return new StudentResource($student);
@@ -1009,6 +1037,7 @@ class StudentController extends Controller
             'enrollments.gradeLevel',
             'enrollments.classroom',
             'enrollments.feeInstallments',
+            'enrollments.deportationPath',
         ])->find($id);
 
         if (!$student) {
@@ -1325,6 +1354,437 @@ class StudentController extends Controller
 
         // Generate filename
         $filename = 'revenues_' . date('Y-m-d_H-i-s') . '.xlsx';
+
+        // Set headers for download
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+
+        // Create writer and output
+        $writer = new Xlsx($spreadsheet);
+        $writer->save('php://output');
+        exit;
+    }
+
+    /**
+     * Generate Deportation Revenues PDF based on student filters.
+     * GET /reports/deportation-revenues
+     */
+    public function deportationRevenuesPdf(Request $request)
+    {
+        $query = Student::with([
+            'enrollments.school',
+            'enrollments.gradeLevel',
+            'enrollments.deportationPath',
+        ]);
+
+        // Apply same filters used in index for enrollments-related fields
+        if ($request->boolean('only_enrolled')) {
+            $query->whereHas('enrollments');
+        }
+        if ($request->boolean('only_approved')) {
+            $query->where('approved', true);
+        }
+        
+        // Only deportation enrollments
+        $query->whereHas('enrollments', function ($q) {
+            $q->where('deportation', true);
+        });
+        
+        // Only students with no payments filter (using deportation ledgers)
+        if ($request->boolean('only_no_payments')) {
+            $query->whereHas('enrollments', function ($q) {
+                $q->whereDoesntHave('deportationLedgers', function ($ledgerQuery) {
+                    $ledgerQuery->where('transaction_type', 'payment');
+                });
+            });
+        }
+        
+        if ($request->filled('school_id')) {
+            $query->whereHas('enrollments', function ($q) use ($request) {
+                $q->where('school_id', $request->get('school_id'));
+            });
+        }
+        if ($request->filled('grade_level_id')) {
+            $query->whereHas('enrollments', function ($q) use ($request) {
+                $q->where('grade_level_id', $request->get('grade_level_id'));
+            });
+        }
+        if ($request->filled('deportation_type')) {
+            $query->whereHas('enrollments', function ($q) use ($request) {
+                $q->where('deportation_type', $request->get('deportation_type'));
+            });
+        }
+        if ($request->filled('deportation_path_id')) {
+            $query->whereHas('enrollments', function ($q) use ($request) {
+                $q->where('deportation_path_id', $request->get('deportation_path_id'));
+            });
+        }
+        if ($request->filled('search')) {
+            $searchTerm = $request->get('search');
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('student_name', 'like', "%{$searchTerm}%")
+                  ->orWhere('goverment_id', 'like', "%{$searchTerm}%");
+            });
+        }
+
+        $students = $query->get();
+
+        // Collect first enrollment IDs (latest by created_at) to summarize ledgers
+        $enrollmentIds = [];
+        foreach ($students as $student) {
+            $firstEnrollment = $student->enrollments->sortByDesc(function ($en) {
+                return $en->created_at?->timestamp ?? 0;
+            })->first();
+            if ($firstEnrollment && $firstEnrollment->id) {
+                $enrollmentIds[] = $firstEnrollment->id;
+            }
+        }
+
+        $byEnrollment = [];
+        $grandFees = 0.0;
+        $grandPayments = 0.0;
+        $grandDiscounts = 0.0;
+        $grandRefunds = 0.0;
+        $grandAdjustments = 0.0;
+        if (!empty($enrollmentIds)) {
+            $summaryRows = StudentDeportationLedger::whereIn('enrollment_id', $enrollmentIds)
+                ->selectRaw('
+                    enrollment_id,
+                    SUM(CASE WHEN transaction_type = "fee" THEN amount ELSE 0 END) as total_fees,
+                    SUM(CASE WHEN transaction_type = "payment" THEN ABS(amount) ELSE 0 END) as total_payments,
+                    SUM(CASE WHEN transaction_type = "discount" THEN amount ELSE 0 END) as total_discounts,
+                    SUM(CASE WHEN transaction_type = "refund" THEN amount ELSE 0 END) as total_refunds,
+                    SUM(CASE WHEN transaction_type = "adjustment" THEN amount ELSE 0 END) as total_adjustments
+                ')
+                ->groupBy('enrollment_id')
+                ->get();
+
+            foreach ($summaryRows as $row) {
+                $byEnrollment[$row->enrollment_id] = [
+                    'total_fees' => (float)$row->total_fees,
+                    'total_payments' => (float)$row->total_payments,
+                    'total_discounts' => (float)$row->total_discounts,
+                    'total_refunds' => (float)$row->total_refunds,
+                    'total_adjustments' => (float)$row->total_adjustments,
+                ];
+                $grandFees += (float)$row->total_fees;
+                $grandPayments += (float)$row->total_payments;
+                $grandDiscounts += (float)$row->total_discounts;
+                $grandRefunds += (float)$row->total_refunds;
+                $grandAdjustments += (float)$row->total_adjustments;
+            }
+        }
+
+        $global = [
+            'total_expected' => $grandFees,
+            'total_paid' => $grandPayments,
+            'total_discounts' => $grandDiscounts,
+            'total_refunds' => $grandRefunds,
+            'total_adjustments' => $grandAdjustments,
+            'total_balance' => max($grandFees - $grandPayments - $grandDiscounts + $grandRefunds + $grandAdjustments, 0),
+            'count' => $students->count(),
+            'by_enrollment' => $byEnrollment,
+        ];
+
+        $pdf = new RevenueListPdf($students, $global);
+        $pdf->SetTitle('تقرير الإيرادات - تسجيلات الترحيل');
+        $pdf->render();
+
+        // Inline display instead of attachment
+        return response($pdf->Output('deportation-revenues.pdf', 'S'))
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'inline; filename="deportation-revenues.pdf"');
+    }
+
+    /**
+     * Export deportation revenues data to Excel.
+     * GET /reports/deportation-revenues-excel
+     */
+    public function exportDeportationRevenuesExcel(Request $request)
+    {
+        // Build the same query as the PDF method
+        $query = Student::with([
+            'enrollments.school',
+            'enrollments.gradeLevel',
+            'enrollments.deportationPath',
+        ]);
+
+        // Apply same filters used in index for enrollments-related fields
+        if ($request->boolean('only_enrolled')) {
+            $query->whereHas('enrollments');
+        }
+        if ($request->boolean('only_approved')) {
+            $query->where('approved', true);
+        }
+        
+        // Only deportation enrollments
+        $query->whereHas('enrollments', function ($q) {
+            $q->where('deportation', true);
+        });
+        
+        // Only students with no payments filter (using deportation ledgers)
+        if ($request->boolean('only_no_payments')) {
+            $query->whereHas('enrollments', function ($q) {
+                $q->whereDoesntHave('deportationLedgers', function ($ledgerQuery) {
+                    $ledgerQuery->where('transaction_type', 'payment');
+                });
+            });
+        }
+        
+        if ($request->filled('school_id')) {
+            $query->whereHas('enrollments', function ($q) use ($request) {
+                $q->where('school_id', $request->get('school_id'));
+            });
+        }
+        if ($request->filled('grade_level_id')) {
+            $query->whereHas('enrollments', function ($q) use ($request) {
+                $q->where('grade_level_id', $request->get('grade_level_id'));
+            });
+        }
+        if ($request->filled('deportation_type')) {
+            $query->whereHas('enrollments', function ($q) use ($request) {
+                $q->where('deportation_type', $request->get('deportation_type'));
+            });
+        }
+        if ($request->filled('deportation_path_id')) {
+            $query->whereHas('enrollments', function ($q) use ($request) {
+                $q->where('deportation_path_id', $request->get('deportation_path_id'));
+            });
+        }
+        if ($request->filled('search')) {
+            $searchTerm = $request->get('search');
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('student_name', 'like', "%{$searchTerm}%")
+                  ->orWhere('goverment_id', 'like', "%{$searchTerm}%");
+            });
+        }
+
+        $students = $query->orderBy('id', 'desc')->get();
+
+        // Create new Spreadsheet object
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('الايرادات - تسجيلات الترحيل');
+
+        // Workbook defaults & RTL
+        $spreadsheet->getProperties()
+            ->setCreator(config('app.name'))
+            ->setTitle('الايرادات - تسجيلات الترحيل')
+            ->setSubject('تقرير ايرادات تسجيلات الترحيل');
+        $spreadsheet->getDefaultStyle()->getFont()->setName('Calibri')->setSize(11);
+        $sheet->setRightToLeft(true);
+        $sheet->getDefaultRowDimension()->setRowHeight(20);
+
+        // Build filter info text early (used in row 2)
+        $filterInfo = [];
+        if ($request->filled('school_id')) {
+            $school = \App\Models\School::find($request->input('school_id'));
+            if ($school) {
+                $filterInfo[] = "المدرسة: " . $school->name;
+            }
+        }
+        if ($request->filled('grade_level_id')) {
+            $gradeLevel = \App\Models\GradeLevel::find($request->input('grade_level_id'));
+            if ($gradeLevel) {
+                $filterInfo[] = "المرحلة: " . $gradeLevel->name;
+            }
+        }
+        if ($request->filled('deportation_type')) {
+            $filterInfo[] = "نوع الترحيل: " . $request->input('deportation_type');
+        }
+        if ($request->filled('deportation_path_id')) {
+            $deportationPath = DeportationPath::find($request->input('deportation_path_id'));
+            if ($deportationPath) {
+                $filterInfo[] = "مسار الترحيل: " . $deportationPath->name;
+            }
+        }
+        if ($request->boolean('only_no_payments')) {
+            $filterInfo[] = "غير مدفوع";
+        }
+        if ($request->filled('search')) {
+            $filterInfo[] = "البحث: " . $request->input('search');
+        }
+
+        // Title row (row 1)
+        $sheet->mergeCells('A1:I1');
+        $sheet->setCellValue('A1', 'الايرادات - تسجيلات الترحيل (' . now()->format('Y-m-d H:i') . ')');
+        $sheet->getStyle('A1')->applyFromArray([
+            'font' => ['bold' => true, 'size' => 14, 'color' => ['rgb' => '1F4E78']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER]
+        ]);
+
+        // Filter info row (row 2)
+        $sheet->mergeCells('A2:I2');
+        $sheet->setCellValue('A2', empty($filterInfo) ? 'بدون فلاتر' : ('فلترة: ' . implode(' | ', $filterInfo)));
+        $sheet->getStyle('A2')->applyFromArray([
+            'font' => ['italic' => true, 'size' => 10, 'color' => ['rgb' => '666666']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F2F2F2']]
+        ]);
+
+        // Headers (row 3)
+        $headers = [
+            'A3' => 'رقم التسجيل',
+            'B3' => 'اسم الطالب',
+            'C3' => 'المدرسة',
+            'D3' => 'نوع الترحيل',
+            'E3' => 'مسار الترحيل',
+            'F3' => 'الرسوم (دفتر)',
+            'G3' => 'المدفوع (دفتر)',
+            'H3' => 'الخصومات',
+            'I3' => 'المتبقي'
+        ];
+        foreach ($headers as $cell => $value) {
+            $sheet->setCellValue($cell, $value);
+        }
+
+        // Style headers
+        $headerRange = 'A3:I3';
+        $sheet->getStyle($headerRange)->applyFromArray([
+            'font' => [
+                'bold' => true,
+                'size' => 12,
+                'color' => ['rgb' => 'FFFFFF']
+            ],
+            'fill' => [
+                'fillType' => Fill::FILL_SOLID,
+                'startColor' => ['rgb' => '4472C4']
+            ],
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                'vertical' => Alignment::VERTICAL_CENTER
+            ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => Border::BORDER_THIN,
+                    'color' => ['rgb' => '000000']
+                ]
+            ]
+        ]);
+        // Freeze panes below header
+        $sheet->freezePane('A4');
+
+        // Get ledger summaries for all enrollments using deportation ledgers
+        $enrollmentIds = $students->pluck('enrollments')->flatten()->pluck('id')->unique()->toArray();
+        $ledgerSummaries = [];
+        
+        if (!empty($enrollmentIds)) {
+            $summaries = StudentDeportationLedger::selectRaw('
+                enrollment_id,
+                SUM(CASE WHEN transaction_type = "fee" THEN amount ELSE 0 END) as total_fees,
+                SUM(CASE WHEN transaction_type = "payment" THEN ABS(amount) ELSE 0 END) as total_payments,
+                SUM(CASE WHEN transaction_type = "discount" THEN amount ELSE 0 END) as total_discounts,
+                SUM(CASE WHEN transaction_type = "refund" THEN amount ELSE 0 END) as total_refunds,
+                SUM(CASE WHEN transaction_type = "adjustment" THEN amount ELSE 0 END) as total_adjustments
+            ')
+            ->whereIn('enrollment_id', $enrollmentIds)
+            ->groupBy('enrollment_id')
+            ->get();
+
+            foreach ($summaries as $summary) {
+                $ledgerSummaries[$summary->enrollment_id] = $summary;
+            }
+        }
+
+        // Add data rows
+        $dataStartRow = 4;
+        $row = $dataStartRow;
+        foreach ($students as $student) {
+            $enrollment = $student->enrollments->first();
+            if (!$enrollment) continue;
+
+            $enrollmentId = $enrollment->id;
+            $summary = $ledgerSummaries[$enrollmentId] ?? null;
+
+            // Calculate values
+            $totalFees = $summary ? $summary->total_fees : 0;
+            $totalPayments = $summary ? $summary->total_payments : 0;
+            $totalDiscounts = $summary ? $summary->total_discounts : 0;
+            $remaining = max(0, $totalFees - $totalPayments - $totalDiscounts);
+
+            $sheet->setCellValue("A{$row}", (int)$enrollmentId);
+            $sheet->setCellValue("B{$row}", $student->student_name ?? '');
+            $sheet->setCellValue("C{$row}", $enrollment->school->name ?? '');
+            $sheet->setCellValue("D{$row}", $enrollment->deportation_type ?? '');
+            $sheet->setCellValue("E{$row}", $enrollment->deportationPath->name ?? '');
+            $sheet->setCellValue("F{$row}", (float)$totalFees);
+            $sheet->setCellValue("G{$row}", (float)$totalPayments);
+            $sheet->setCellValue("H{$row}", (float)$totalDiscounts);
+            $sheet->setCellValue("I{$row}", (float)$remaining);
+
+            // Style data rows
+            $dataRange = "A{$row}:I{$row}";
+            $sheet->getStyle($dataRange)->applyFromArray([
+                'alignment' => [
+                    'horizontal' => Alignment::HORIZONTAL_CENTER,
+                    'vertical' => Alignment::VERTICAL_CENTER
+                ],
+                'borders' => [
+                    'allBorders' => [
+                        'borderStyle' => Border::BORDER_THIN,
+                        'color' => ['rgb' => '000000']
+                    ]
+                ]
+            ]);
+
+            // Highlight rows with discounts or no payments
+            if ($totalDiscounts > 0) {
+                $sheet->getStyle($dataRange)->applyFromArray([
+                    'fill' => [
+                        'fillType' => Fill::FILL_SOLID,
+                        'startColor' => ['rgb' => 'FFF2CC']
+                    ]
+                ]);
+            } elseif ($totalPayments == 0) {
+                $sheet->getStyle($dataRange)->applyFromArray([
+                    'fill' => [
+                        'fillType' => Fill::FILL_SOLID,
+                        'startColor' => ['rgb' => 'FFE6E6']
+                    ]
+                ]);
+            }
+
+            $row++;
+        }
+
+        // Auto-size columns
+        foreach (range('A', 'I') as $column) {
+            $sheet->getColumnDimension($column)->setAutoSize(true);
+        }
+
+        // Number formats for numeric columns
+        $dataEndRow = $row - 1;
+        if ($dataEndRow >= $dataStartRow) {
+            $sheet->getStyle("F{$dataStartRow}:I{$dataEndRow}")
+                ->getNumberFormat()->setFormatCode('#,##0');
+
+            // Auto filter on header + data
+            $sheet->setAutoFilter("A3:I{$dataEndRow}");
+
+            // Totals row
+            $totalsRow = $dataEndRow + 1;
+            $sheet->setCellValue("E{$totalsRow}", 'الإجمالي');
+            $sheet->setCellValue("F{$totalsRow}", "=SUBTOTAL(9,F{$dataStartRow}:F{$dataEndRow})");
+            $sheet->setCellValue("G{$totalsRow}", "=SUBTOTAL(9,G{$dataStartRow}:G{$dataEndRow})");
+            $sheet->setCellValue("H{$totalsRow}", "=SUBTOTAL(9,H{$dataStartRow}:H{$dataEndRow})");
+            $sheet->setCellValue("I{$totalsRow}", "=SUBTOTAL(9,I{$dataStartRow}:I{$dataEndRow})");
+            $sheet->getStyle("E{$totalsRow}:I{$totalsRow}")->applyFromArray([
+                'font' => ['bold' => true],
+                'borders' => [
+                    'top' => ['borderStyle' => Border::BORDER_MEDIUM]
+                ]
+            ]);
+            $sheet->getStyle("F{$totalsRow}:I{$totalsRow}")->getNumberFormat()->setFormatCode('#,##0');
+        }
+
+        // Page setup for printing
+        $sheet->getPageSetup()->setOrientation(PageSetup::ORIENTATION_LANDSCAPE);
+        $sheet->getPageSetup()->setPaperSize(PageSetup::PAPERSIZE_A4);
+        $sheet->getPageSetup()->setFitToWidth(1)->setFitToHeight(0);
+        $sheet->getPageMargins()->setTop(0.4)->setBottom(0.4)->setLeft(0.3)->setRight(0.3);
+
+        // Generate filename
+        $filename = 'deportation-revenues_' . date('Y-m-d_H-i-s') . '.xlsx';
 
         // Set headers for download
         header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');

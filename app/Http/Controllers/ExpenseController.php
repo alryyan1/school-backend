@@ -9,6 +9,12 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use App\Helpers\ExpenseListPdf;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 
 class ExpenseController extends Controller
 {
@@ -76,7 +82,7 @@ class ExpenseController extends Controller
             'amount' => 'required|numeric|min:0.01',
             'expense_category_id' => 'required|exists:expense_categories,id',
             'expense_date' => 'required|date',
-            'payment_method' => 'required|in:cash,bankak',
+            'payment_method' => 'required|in:cash,bankak,fawri,ocash',
         ]);
 
         if ($validator->fails()) {
@@ -116,7 +122,7 @@ class ExpenseController extends Controller
             'amount' => 'sometimes|required|numeric|min:0.01',
             'expense_category_id' => 'sometimes|required|exists:expense_categories,id',
             'expense_date' => 'sometimes|required|date',
-            'payment_method' => 'sometimes|required|in:cash,bankak',
+            'payment_method' => 'sometimes|required|in:cash,bankak,fawri,ocash',
         ]);
 
         if ($validator->fails()) {
@@ -312,5 +318,204 @@ class ExpenseController extends Controller
         return response($pdf->Output('expenses.pdf', 'S'))
             ->header('Content-Type', 'application/pdf')
             ->header('Content-Disposition', 'inline; filename="expenses.pdf"');
+    }
+
+    /**
+     * Export expenses to Excel
+     */
+    public function exportExcel(Request $request)
+    {
+        $query = Expense::with(['expenseCategory', 'createdBy']);
+
+        if ($request->has('category_id') && $request->category_id) {
+            $query->where('expense_category_id', $request->category_id);
+        }
+        if ($request->has('date_from') && $request->date_from) {
+            $query->where('expense_date', '>=', $request->date_from);
+        }
+        if ($request->has('date_to') && $request->date_to) {
+            $query->where('expense_date', '<=', $request->date_to);
+        }
+        if ($request->has('search') && $request->search) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        $sortBy = $request->get('sort_by', 'expense_date');
+        $sortOrder = $request->get('sort_order', 'desc');
+        $expenses = $query->orderBy($sortBy, $sortOrder)->get();
+
+        $total = $expenses->sum('amount');
+        $count = $expenses->count();
+        $average = $count > 0 ? $total / $count : 0;
+
+        // Create new Spreadsheet object
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('المصروفات');
+
+        // Workbook defaults & RTL
+        $spreadsheet->getProperties()
+            ->setCreator(config('app.name'))
+            ->setTitle('تقرير المصروفات')
+            ->setSubject('تقرير المصروفات');
+        $spreadsheet->getDefaultStyle()->getFont()->setName('Calibri')->setSize(11);
+        $sheet->setRightToLeft(true);
+        $sheet->getDefaultRowDimension()->setRowHeight(20);
+
+        // Build filter info
+        $filterInfo = [];
+        if ($request->has('category_id') && $request->category_id) {
+            $category = ExpenseCategory::find($request->category_id);
+            if ($category) {
+                $filterInfo[] = "الفئة: " . $category->name;
+            }
+        }
+        if ($request->has('date_from') && $request->date_from) {
+            $filterInfo[] = "من تاريخ: " . $request->date_from;
+        }
+        if ($request->has('date_to') && $request->date_to) {
+            $filterInfo[] = "إلى تاريخ: " . $request->date_to;
+        }
+        if ($request->has('search') && $request->search) {
+            $filterInfo[] = "البحث: " . $request->search;
+        }
+
+        // Title row (row 1)
+        $sheet->mergeCells('A1:H1');
+        $sheet->setCellValue('A1', 'تقرير المصروفات (' . now()->format('Y-m-d H:i') . ')');
+        $sheet->getStyle('A1')->applyFromArray([
+            'font' => ['bold' => true, 'size' => 14, 'color' => ['rgb' => '1F4E78']],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER]
+        ]);
+
+        // Filter info row (row 2)
+        $sheet->mergeCells('A2:H2');
+        $sheet->setCellValue('A2', empty($filterInfo) ? 'بدون فلاتر' : ('فلترة: ' . implode(' | ', $filterInfo)));
+        $sheet->getStyle('A2')->applyFromArray([
+            'font' => ['italic' => true, 'size' => 10, 'color' => ['rgb' => '666666']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F2F2F2']]
+        ]);
+
+        // Headers (row 3)
+        $headers = [
+            'A3' => 'رقم',
+            'B3' => 'العنوان',
+            'C3' => 'الفئة',
+            'D3' => 'المبلغ',
+            'E3' => 'التاريخ',
+            'F3' => 'طريقة الدفع',
+            'G3' => 'الوصف',
+            'H3' => 'المستخدم'
+        ];
+        foreach ($headers as $cell => $value) {
+            $sheet->setCellValue($cell, $value);
+        }
+
+        // Style headers
+        $headerRange = 'A3:H3';
+        $sheet->getStyle($headerRange)->applyFromArray([
+            'font' => [
+                'bold' => true,
+                'color' => ['rgb' => 'FFFFFF']
+            ],
+            'fill' => [
+                'fillType' => Fill::FILL_SOLID,
+                'startColor' => ['rgb' => '4472C4']
+            ],
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                'vertical' => Alignment::VERTICAL_CENTER
+            ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => Border::BORDER_THIN,
+                    'color' => ['rgb' => '000000']
+                ]
+            ]
+        ]);
+
+        // Add data rows
+        $row = 4;
+        $dataStartRow = $row;
+        foreach ($expenses as $expense) {
+            $sheet->setCellValue("A{$row}", $expense->id);
+            $sheet->setCellValue("B{$row}", $expense->title);
+            $sheet->setCellValue("C{$row}", $expense->expenseCategory->name ?? '');
+            $sheet->setCellValue("D{$row}", number_format($expense->amount, 2));
+            $sheet->setCellValue("E{$row}", date('Y-m-d', strtotime($expense->expense_date)));
+            $sheet->setCellValue("F{$row}", $this->translatePaymentMethod($expense->payment_method));
+            $sheet->setCellValue("G{$row}", $expense->description ?? '');
+            $sheet->setCellValue("H{$row}", $expense->createdBy->name ?? 'غير محدد');
+
+            // Style data rows
+            $sheet->getStyle("A{$row}:H{$row}")->applyFromArray([
+                'borders' => [
+                    'allBorders' => [
+                        'borderStyle' => Border::BORDER_THIN,
+                        'color' => ['rgb' => 'CCCCCC']
+                    ]
+                ]
+            ]);
+            $row++;
+        }
+
+        // Add auto-filter capability to headers and data
+        $dataEndRow = $row - 1;
+        if ($dataEndRow >= $dataStartRow) {
+            $sheet->setAutoFilter("A3:H{$dataEndRow}");
+        }
+
+        // Summary section
+        $summaryRow = $row + 1;
+        $sheet->setCellValue("C{$summaryRow}", 'الإجمالي:');
+        $sheet->setCellValue("D{$summaryRow}", number_format($total, 2));
+        $sheet->getStyle("C{$summaryRow}:D{$summaryRow}")->getFont()->setBold(true);
+
+        $summaryRow++;
+        $sheet->setCellValue("C{$summaryRow}", 'عدد المصروفات:');
+        $sheet->setCellValue("D{$summaryRow}", $count);
+        $sheet->getStyle("C{$summaryRow}:D{$summaryRow}")->getFont()->setBold(true);
+
+        $summaryRow++;
+        $sheet->setCellValue("C{$summaryRow}", 'المتوسط:');
+        $sheet->setCellValue("D{$summaryRow}", number_format($average, 2));
+        $sheet->getStyle("C{$summaryRow}:D{$summaryRow}")->getFont()->setBold(true);
+
+        // Auto-size columns
+        foreach (range('A', 'H') as $col) {
+            $sheet->getColumnDimension($col)->setAutoSize(true);
+        }
+
+        // Freeze panes below header
+        $sheet->freezePane('A4');
+
+        // Create writer and output
+        $writer = new Xlsx($spreadsheet);
+        $filename = 'expenses_' . date('Y-m-d') . '.xlsx';
+        
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+
+        $writer->save('php://output');
+        exit;
+    }
+
+    /**
+     * Translate payment method to Arabic.
+     */
+    private function translatePaymentMethod($method): string
+    {
+        $translations = [
+            'cash' => 'نقدي',
+            'bankak' => 'بنكاك',
+            'fawri' => 'فوري',
+            'ocash' => 'أوكاش',
+        ];
+        return $translations[$method] ?? $method;
     }
 }
