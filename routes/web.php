@@ -48,6 +48,12 @@ Route::get('/enrollments/{enrollment}/fee-statement-pdf', [FeeInstallmentControl
     Route::get('/student-ledgers/enrollment/{enrollmentId}/pdf', [\App\Http\Controllers\StudentLedgerController::class, 'generatePdf'])
          ->name('student-ledgers.pdf');
 
+    // --- Ledger by Payment Method PDF and Excel ---
+    Route::get('/student-ledgers/by-payment-method/pdf', [\App\Http\Controllers\StudentLedgerController::class, 'generatePdfByPaymentMethod'])
+         ->name('student-ledgers.by-payment-method.pdf');
+    Route::get('/student-ledgers/by-payment-method/excel', [\App\Http\Controllers\StudentLedgerController::class, 'exportExcelByPaymentMethod'])
+         ->name('student-ledgers.by-payment-method.excel');
+
     // --- Revenues PDF (web route to open in new tab) ---
     Route::get('/reports/revenues', [StudentController::class, 'revenuesPdfWeb'])
          ->name('reports.revenues.pdf');

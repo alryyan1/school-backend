@@ -13,6 +13,13 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
+use TCPDF;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 
 class StudentLedgerController extends Controller
 {
@@ -389,5 +396,285 @@ class StudentLedgerController extends Controller
             $entry->balance_after = $runningBalance;
             $entry->save();
         }
+    }
+
+    /**
+     * Generate PDF for ledger entries by payment method.
+     */
+    public function generatePdfByPaymentMethod(Request $request)
+    {
+        $request->validate([
+            'payment_method' => ['required', Rule::in([
+                StudentLedger::PAYMENT_METHOD_CASH,
+                StudentLedger::PAYMENT_METHOD_BANAK,
+                StudentLedger::PAYMENT_METHOD_FAWRI,
+                StudentLedger::PAYMENT_METHOD_OCASH,
+            ])],
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+        ]);
+
+        $query = StudentLedger::where('payment_method', $request->payment_method)
+            ->with(['enrollment.student', 'enrollment.school', 'enrollment.gradeLevel', 'enrollment.classroom', 'createdBy'])
+            ->orderBy('transaction_date', 'asc')
+            ->orderBy('id', 'asc');
+
+        if ($request->start_date) {
+            $query->where('transaction_date', '>=', $request->start_date);
+        }
+
+        if ($request->end_date) {
+            $query->where('transaction_date', '<=', $request->end_date);
+        }
+
+        $ledgerEntries = $query->get();
+
+        // Calculate running balance
+        $runningBalance = 0;
+        $entriesWithBalance = $ledgerEntries->map(function ($entry) use (&$runningBalance) {
+            $amount = (float) $entry->amount;
+            if ($entry->transaction_type === 'fee') {
+                $runningBalance += $amount;
+            } else if ($entry->transaction_type === 'payment') {
+                $runningBalance += $amount;
+            } else if ($entry->transaction_type === 'discount') {
+                $runningBalance -= $amount;
+            } else if ($entry->transaction_type === 'refund') {
+                $runningBalance -= $amount;
+            } else if ($entry->transaction_type === 'adjustment') {
+                $runningBalance += $amount;
+            }
+            $entry->running_balance = $runningBalance;
+            return $entry;
+        });
+
+        // Create PDF
+        $pdf = new TCPDF('L', PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
+        $pdf->SetCreator(config('app.name'));
+        $pdf->SetAuthor(config('app.name'));
+        $pdf->SetTitle('دفتر الحسابات - ' . $this->translatePaymentMethod($request->payment_method));
+        $pdf->SetSubject('تقرير دفتر الحسابات حسب طريقة الدفع');
+
+        // Remove default header/footer
+        $pdf->setPrintHeader(false);
+        $pdf->setPrintFooter(false);
+
+        // Add a page
+        $pdf->AddPage();
+
+        // Set RTL
+        $pdf->setRTL(true);
+
+        // Set font
+        $pdf->SetFont('dejavusans', '', 10);
+
+        // Title
+        $pdf->SetFont('dejavusans', 'B', 16);
+        $pdf->Cell(0, 10, 'دفتر الحسابات - ' . $this->translatePaymentMethod($request->payment_method), 0, 1, 'C');
+        $pdf->SetFont('dejavusans', '', 10);
+        
+        // Date range
+        if ($request->start_date && $request->end_date) {
+            $pdf->Cell(0, 5, 'من تاريخ: ' . $request->start_date . ' إلى تاريخ: ' . $request->end_date, 0, 1, 'C');
+        }
+        $pdf->Ln(5);
+
+        // Table header
+        $pdf->SetFont('dejavusans', 'B', 9);
+        $pdf->SetFillColor(200, 200, 200);
+        $pdf->Cell(25, 8, 'التاريخ', 1, 0, 'C', true);
+        $pdf->Cell(20, 8, 'النوع', 1, 0, 'C', true);
+        $pdf->Cell(60, 8, 'الوصف', 1, 0, 'C', true);
+        $pdf->Cell(30, 8, 'المبلغ', 1, 0, 'C', true);
+        $pdf->Cell(30, 8, 'رصيد الحساب', 1, 0, 'C', true);
+        $pdf->Cell(30, 8, 'رقم المرجع', 1, 0, 'C', true);
+        $pdf->Cell(50, 8, 'اسم الطالب', 1, 0, 'C', true);
+        $pdf->Cell(40, 8, 'تم الإنشاء بواسطة', 1, 1, 'C', true);
+
+        // Table rows
+        $pdf->SetFont('dejavusans', '', 8);
+        $pdf->SetFillColor(255, 255, 255);
+        foreach ($entriesWithBalance as $entry) {
+            $pdf->Cell(25, 6, date('Y/m/d', strtotime($entry->transaction_date)), 1, 0, 'C');
+            $pdf->Cell(20, 6, $this->translateTransactionType($entry->transaction_type), 1, 0, 'C');
+            $pdf->Cell(60, 6, mb_substr($entry->description, 0, 30), 1, 0, 'R');
+            $pdf->Cell(30, 6, number_format($entry->amount, 2) . ' جنيه', 1, 0, 'C');
+            $pdf->Cell(30, 6, number_format($entry->running_balance, 2) . ' جنيه', 1, 0, 'C');
+            $pdf->Cell(30, 6, $entry->reference_number ?? '-', 1, 0, 'C');
+            $pdf->Cell(50, 6, mb_substr($entry->enrollment->student->student_name ?? '-', 0, 20), 1, 0, 'R');
+            $pdf->Cell(40, 6, mb_substr($entry->createdBy->name ?? '-', 0, 15), 1, 1, 'R');
+        }
+
+        // Summary
+        $pdf->Ln(5);
+        $pdf->SetFont('dejavusans', 'B', 10);
+        $pdf->Cell(0, 8, 'إجمالي المعاملات: ' . $ledgerEntries->count(), 0, 1, 'R');
+        $pdf->Cell(0, 8, 'إجمالي المبلغ: ' . number_format($ledgerEntries->sum('amount'), 2) . ' جنيه', 0, 1, 'R');
+        $pdf->Cell(0, 8, 'الرصيد النهائي: ' . number_format($runningBalance, 2) . ' جنيه', 0, 1, 'R');
+
+        // Output PDF
+        $filename = 'ledger_payment_method_' . $request->payment_method . '_' . date('Y-m-d') . '.pdf';
+        $pdf->Output($filename, 'I');
+    }
+
+    /**
+     * Export ledger entries by payment method to Excel.
+     */
+    public function exportExcelByPaymentMethod(Request $request)
+    {
+        $request->validate([
+            'payment_method' => ['required', Rule::in([
+                StudentLedger::PAYMENT_METHOD_CASH,
+                StudentLedger::PAYMENT_METHOD_BANAK,
+                StudentLedger::PAYMENT_METHOD_FAWRI,
+                StudentLedger::PAYMENT_METHOD_OCASH,
+            ])],
+            'start_date' => 'nullable|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+        ]);
+
+        $query = StudentLedger::where('payment_method', $request->payment_method)
+            ->with(['enrollment.student', 'enrollment.school', 'enrollment.gradeLevel', 'enrollment.classroom', 'createdBy'])
+            ->orderBy('transaction_date', 'asc')
+            ->orderBy('id', 'asc');
+
+        if ($request->start_date) {
+            $query->where('transaction_date', '>=', $request->start_date);
+        }
+
+        if ($request->end_date) {
+            $query->where('transaction_date', '<=', $request->end_date);
+        }
+
+        $ledgerEntries = $query->get();
+
+        // Calculate running balance
+        $runningBalance = 0;
+        $entriesWithBalance = $ledgerEntries->map(function ($entry) use (&$runningBalance) {
+            $amount = (float) $entry->amount;
+            if ($entry->transaction_type === 'fee') {
+                $runningBalance += $amount;
+            } else if ($entry->transaction_type === 'payment') {
+                $runningBalance += $amount;
+            } else if ($entry->transaction_type === 'discount') {
+                $runningBalance -= $amount;
+            } else if ($entry->transaction_type === 'refund') {
+                $runningBalance -= $amount;
+            } else if ($entry->transaction_type === 'adjustment') {
+                $runningBalance += $amount;
+            }
+            $entry->running_balance = $runningBalance;
+            return $entry;
+        });
+
+        // Create new Spreadsheet object
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('دفتر الحسابات');
+
+        // Workbook defaults & RTL
+        $spreadsheet->getProperties()
+            ->setCreator(config('app.name'))
+            ->setTitle('دفتر الحسابات - ' . $this->translatePaymentMethod($request->payment_method))
+            ->setSubject('تقرير دفتر الحسابات حسب طريقة الدفع');
+        $spreadsheet->getDefaultStyle()->getFont()->setName('Calibri')->setSize(11);
+        $sheet->setRightToLeft(true);
+        $sheet->getDefaultRowDimension()->setRowHeight(20);
+
+        // Title
+        $sheet->setCellValue('A1', 'دفتر الحسابات - ' . $this->translatePaymentMethod($request->payment_method));
+        $sheet->mergeCells('A1:H1');
+        $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(14);
+        $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+        // Date range
+        if ($request->start_date && $request->end_date) {
+            $sheet->setCellValue('A2', 'من تاريخ: ' . $request->start_date . ' إلى تاريخ: ' . $request->end_date);
+            $sheet->mergeCells('A2:H2');
+            $sheet->getStyle('A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        }
+
+        // Headers
+        $headers = ['التاريخ', 'النوع', 'الوصف', 'المبلغ', 'رصيد الحساب', 'رقم المرجع', 'اسم الطالب', 'تم الإنشاء بواسطة'];
+        $colIndex = 1; // Start from column A (1 = A, 2 = B, etc.)
+        $row = 4;
+        foreach ($headers as $header) {
+            $colLetter = Coordinate::stringFromColumnIndex($colIndex);
+            $sheet->setCellValue($colLetter . $row, $header);
+            $sheet->getStyle($colLetter . $row)->getFont()->setBold(true);
+            $sheet->getStyle($colLetter . $row)->getFill()
+                ->setFillType(Fill::FILL_SOLID)
+                ->getStartColor()->setRGB('C0C0C0');
+            $sheet->getStyle($colLetter . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getColumnDimension($colLetter)->setAutoSize(true);
+            $colIndex++;
+        }
+
+        // Data rows
+        $row = 5;
+        foreach ($entriesWithBalance as $entry) {
+            $colIndex = 1; // Start from column A (1 = A, 2 = B, etc.)
+            $sheet->setCellValueByColumnAndRow($colIndex++, $row, date('Y/m/d', strtotime($entry->transaction_date)));
+            $sheet->setCellValueByColumnAndRow($colIndex++, $row, $this->translateTransactionType($entry->transaction_type));
+            $sheet->setCellValueByColumnAndRow($colIndex++, $row, $entry->description);
+            $sheet->setCellValueByColumnAndRow($colIndex++, $row, number_format($entry->amount, 2));
+            $sheet->setCellValueByColumnAndRow($colIndex++, $row, number_format($entry->running_balance, 2));
+            $sheet->setCellValueByColumnAndRow($colIndex++, $row, $entry->reference_number ?? '-');
+            $sheet->setCellValueByColumnAndRow($colIndex++, $row, $entry->enrollment->student->student_name ?? '-');
+            $sheet->setCellValueByColumnAndRow($colIndex++, $row, $entry->createdBy->name ?? '-');
+            $row++;
+        }
+
+        // Summary
+        $row++;
+        $sheet->setCellValue('D' . $row, 'إجمالي المعاملات:');
+        $sheet->setCellValue('E' . $row, $ledgerEntries->count());
+        $row++;
+        $sheet->setCellValue('D' . $row, 'إجمالي المبلغ:');
+        $sheet->setCellValue('E' . $row, number_format($ledgerEntries->sum('amount'), 2) . ' جنيه');
+        $row++;
+        $sheet->setCellValue('D' . $row, 'الرصيد النهائي:');
+        $sheet->setCellValue('E' . $row, number_format($runningBalance, 2) . ' جنيه');
+        $sheet->getStyle('D' . ($row - 2) . ':E' . $row)->getFont()->setBold(true);
+
+        // Create writer and output
+        $writer = new Xlsx($spreadsheet);
+        $filename = 'ledger_payment_method_' . $request->payment_method . '_' . date('Y-m-d') . '.xlsx';
+        
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+
+        $writer->save('php://output');
+        exit;
+    }
+
+    /**
+     * Translate payment method to Arabic.
+     */
+    private function translatePaymentMethod($method): string
+    {
+        $translations = [
+            'cash' => 'نقداً',
+            'bankak' => 'بنكك',
+            'Fawri' => 'فوري',
+            'OCash' => 'أوكاش',
+        ];
+        return $translations[$method] ?? $method;
+    }
+
+    /**
+     * Translate transaction type to Arabic.
+     */
+    private function translateTransactionType($type): string
+    {
+        $translations = [
+            'fee' => 'رسوم',
+            'payment' => 'دفع',
+            'discount' => 'خصم',
+            'refund' => 'استرداد',
+            'adjustment' => 'تعديل',
+        ];
+        return $translations[$type] ?? $type;
     }
 }
