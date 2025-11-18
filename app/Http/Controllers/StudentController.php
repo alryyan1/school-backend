@@ -230,6 +230,41 @@ class StudentController extends Controller
             'enrollments.feeInstallments',
         ]);
 
+        // Search term filter (supports name/phones/email/gov id, student id, or enrollment id)
+        if ($request->filled('search')) {
+            $searchTerm = trim((string) $request->get('search'));
+
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('student_name', 'like', "%{$searchTerm}%")
+                  ->orWhere('father_name', 'like', "%{$searchTerm}%")
+                  ->orWhere('father_phone', 'like', "%{$searchTerm}%")
+                  ->orWhere('mother_name', 'like', "%{$searchTerm}%")
+                  ->orWhere('mother_phone', 'like', "%{$searchTerm}%")
+                  ->orWhere('email', 'like', "%{$searchTerm}%")
+                  ->orWhere('goverment_id', 'like', "%{$searchTerm}%");
+                  
+            });
+
+            // If numeric, also try matching student id or related enrollment id
+            if (ctype_digit($searchTerm)) {
+                $numeric = (int) $searchTerm;
+                $query->orWhere('id', $numeric)
+                      ->orWhereHas('enrollments', function ($en) use ($numeric) {
+                          $en->where('id', $numeric);
+                      });
+            }
+        }
+
+        // Reference number filter - search by ledger reference_number
+        if ($request->filled('reference_number')) {
+            $referenceNumber = trim((string) $request->get('reference_number'));
+            $query->whereHas('enrollments', function ($en) use ($referenceNumber) {
+                $en->whereHas('studentLedgers', function ($ledger) use ($referenceNumber) {
+                    $ledger->where('reference_number', 'like', "%{$referenceNumber}%");
+                });
+            });
+        }
+
         // Apply same filters used in index for enrollments-related fields
         if ($request->boolean('only_enrolled')) {
             $query->whereHas('enrollments');
@@ -244,6 +279,13 @@ class StudentController extends Controller
                 $q->whereDoesntHave('studentLedgers', function ($ledgerQuery) {
                     $ledgerQuery->where('transaction_type', 'payment');
                 });
+            });
+        }
+        
+        // Only deportation enrollments filter
+        if ($request->boolean('only_deportation')) {
+            $query->whereHas('enrollments', function ($q) {
+                $q->where('deportation', true);
             });
         }
         
@@ -349,6 +391,41 @@ class StudentController extends Controller
             'enrollments.feeInstallments',
         ]);
 
+        // Search term filter (supports name/phones/email/gov id, student id, or enrollment id)
+        if ($request->filled('search')) {
+            $searchTerm = trim((string) $request->get('search'));
+
+            $query->where(function ($q) use ($searchTerm) {
+                $q->where('student_name', 'like', "%{$searchTerm}%")
+                  ->orWhere('father_name', 'like', "%{$searchTerm}%")
+                  ->orWhere('father_phone', 'like', "%{$searchTerm}%")
+                  ->orWhere('mother_name', 'like', "%{$searchTerm}%")
+                  ->orWhere('mother_phone', 'like', "%{$searchTerm}%")
+                  ->orWhere('email', 'like', "%{$searchTerm}%")
+                  ->orWhere('goverment_id', 'like', "%{$searchTerm}%");
+                  
+            });
+
+            // If numeric, also try matching student id or related enrollment id
+            if (ctype_digit($searchTerm)) {
+                $numeric = (int) $searchTerm;
+                $query->orWhere('id', $numeric)
+                      ->orWhereHas('enrollments', function ($en) use ($numeric) {
+                          $en->where('id', $numeric);
+                      });
+            }
+        }
+
+        // Reference number filter - search by ledger reference_number
+        if ($request->filled('reference_number')) {
+            $referenceNumber = trim((string) $request->get('reference_number'));
+            $query->whereHas('enrollments', function ($en) use ($referenceNumber) {
+                $en->whereHas('studentLedgers', function ($ledger) use ($referenceNumber) {
+                    $ledger->where('reference_number', 'like', "%{$referenceNumber}%");
+                });
+            });
+        }
+
         if ($request->boolean('only_enrolled')) {
             $query->whereHas('enrollments');
         }
@@ -362,6 +439,13 @@ class StudentController extends Controller
                 $q->whereDoesntHave('studentLedgers', function ($ledgerQuery) {
                     $ledgerQuery->where('transaction_type', 'payment');
                 });
+            });
+        }
+        
+        // Only deportation enrollments filter
+        if ($request->boolean('only_deportation')) {
+            $query->whereHas('enrollments', function ($q) {
+                $q->where('deportation', true);
             });
         }
         
@@ -1096,6 +1180,13 @@ class StudentController extends Controller
             });
         }
         
+        // Only deportation enrollments filter
+        if ($request->boolean('only_deportation')) {
+            $query->whereHas('enrollments', function ($q) {
+                $q->where('deportation', true);
+            });
+        }
+        
         if ($request->filled('school_id')) {
             $query->whereHas('enrollments', function ($q) use ($request) {
                 $q->where('school_id', $request->get('school_id'));
@@ -1117,10 +1208,34 @@ class StudentController extends Controller
             });
         }
         if ($request->filled('search')) {
-            $searchTerm = $request->get('search');
+            $searchTerm = trim((string) $request->get('search'));
             $query->where(function ($q) use ($searchTerm) {
                 $q->where('student_name', 'like', "%{$searchTerm}%")
+                  ->orWhere('father_name', 'like', "%{$searchTerm}%")
+                  ->orWhere('father_phone', 'like', "%{$searchTerm}%")
+                  ->orWhere('mother_name', 'like', "%{$searchTerm}%")
+                  ->orWhere('mother_phone', 'like', "%{$searchTerm}%")
+                  ->orWhere('email', 'like', "%{$searchTerm}%")
                   ->orWhere('goverment_id', 'like', "%{$searchTerm}%");
+            });
+            
+            // If numeric, also try matching student id or related enrollment id
+            if (ctype_digit($searchTerm)) {
+                $numeric = (int) $searchTerm;
+                $query->orWhere('id', $numeric)
+                      ->orWhereHas('enrollments', function ($en) use ($numeric) {
+                          $en->where('id', $numeric);
+                      });
+            }
+        }
+        
+        // Reference number filter - search by ledger reference_number
+        if ($request->filled('reference_number')) {
+            $referenceNumber = trim((string) $request->get('reference_number'));
+            $query->whereHas('enrollments', function ($en) use ($referenceNumber) {
+                $en->whereHas('studentLedgers', function ($ledger) use ($referenceNumber) {
+                    $ledger->where('reference_number', 'like', "%{$referenceNumber}%");
+                });
             });
         }
 

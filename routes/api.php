@@ -236,6 +236,14 @@ Route::prefix('student-ledger-deletions')->group(function () {
     Route::apiResource('expense-categories', ExpenseCategoryController::class);
     Route::get('expense-categories-active', [ExpenseCategoryController::class, 'active'])->name('expense-categories.active');
 
+    // --- REVENUE CATEGORY ROUTES ---
+    Route::apiResource('revenue-categories', \App\Http\Controllers\RevenueCategoryController::class);
+    Route::get('revenue-categories-all', [\App\Http\Controllers\RevenueCategoryController::class, 'all'])->name('revenue-categories.all');
+
+    // --- OTHER REVENUE ROUTES ---
+    Route::apiResource('other-revenues', \App\Http\Controllers\OtherRevenueController::class);
+    Route::get('other-revenues-statistics', [\App\Http\Controllers\OtherRevenueController::class, 'statistics'])->name('other-revenues.statistics');
+
     // --- WhatsApp (Ultramsg) ---
     Route::post('/whatsapp/send-text', [UltramsgController::class, 'sendText'])->name('whatsapp.sendText');
     Route::post('/whatsapp/send-document', [UltramsgController::class, 'sendDocument'])->name('whatsapp.sendDocument');

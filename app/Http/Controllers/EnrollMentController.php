@@ -5,11 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\Enrollment;
 use App\Models\Student;
 use App\Models\StudentLedger;
+use App\Models\StudentDeportationLedger;
 use App\Models\EnrollmentLog;
 use Illuminate\Http\Request;
 use App\Http\Resources\EnrollmentResource;
 use App\Models\StudentTransportAssignment;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class EnrollmentController extends Controller
@@ -848,15 +851,62 @@ class EnrollmentController extends Controller
             $validatedData['deportation_path_id'] = null;
         }
 
-        $enrollment->update($validatedData);
+        try {
+            DB::beginTransaction();
 
-        // Log the change
-        $this->logEnrollmentChanges($enrollment, $validatedData, $oldData);
+            $enrollment->update($validatedData);
 
-        return response()->json([
-            'message' => 'تم تحديث اشتراك الترحيل بنجاح',
-            'enrollment' => new EnrollmentResource($enrollment->load(['student', 'gradeLevel', 'classroom', 'school', 'deportationPath']))
-        ], 200);
+            // If this is a new deportation subscription (wasn't subscribed before, now is)
+            // and deportation_type is provided, create a ledger entry
+            if ($validatedData['deportation'] 
+                && !$oldData['old_deportation'] 
+                && isset($validatedData['deportation_type']) 
+                && $validatedData['deportation_type']) {
+                
+                // Determine the fee amount based on deportation type
+                $feeAmount = 0;
+                if ($validatedData['deportation_type'] === 'داخلي') {
+                    $feeAmount = 400000;
+                } elseif ($validatedData['deportation_type'] === 'خارجي') {
+                    $feeAmount = 500000;
+                }
+
+                if ($feeAmount > 0) {
+                    // Create deportation ledger entry
+                    StudentDeportationLedger::addEntry([
+                        'enrollment_id' => $enrollment->id,
+                        'student_id' => $enrollment->student_id,
+                        'transaction_type' => StudentDeportationLedger::TYPE_FEE,
+                        'description' => 'رسوم اشتراك الترحيل - ' . $validatedData['deportation_type'],
+                        'amount' => $feeAmount,
+                        'transaction_date' => now()->toDateString(),
+                        'reference_number' => null,
+                        'payment_method' => null,
+                        'metadata' => [
+                            'deportation_type' => $validatedData['deportation_type'],
+                            'deportation_path_id' => $validatedData['deportation_path_id'] ?? null,
+                        ],
+                        'created_by' => Auth::id(),
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            // Log the change
+            $this->logEnrollmentChanges($enrollment, $validatedData, $oldData);
+
+            return response()->json([
+                'message' => 'تم تحديث اشتراك الترحيل بنجاح',
+                'enrollment' => new EnrollmentResource($enrollment->load(['student', 'gradeLevel', 'classroom', 'school', 'deportationPath']))
+            ], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'حدث خطأ أثناء تحديث اشتراك الترحيل',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**

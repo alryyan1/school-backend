@@ -112,6 +112,7 @@ class StudentResource extends JsonResource
                         ] : null,
                         'deportation' => (bool) $enrollment->deportation,
                         'deportation_type' => $enrollment->deportation_type,
+                        'deportation_path_id' => $enrollment->deportation_path_id,
                         'deportation_path' => $enrollment->deportationPath ? [
                             'id' => $enrollment->deportationPath->id,
                             'name' => $enrollment->deportationPath->name,
