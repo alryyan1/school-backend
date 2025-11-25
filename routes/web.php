@@ -35,6 +35,8 @@ Route::get('/enrollments/{enrollment}/fee-statement-pdf', [FeeInstallmentControl
     // --- Route for Student List PDF ---
     Route::get('/reports/students/list-pdf', [StudentController::class, 'generateListPdf'])
          ->name('reports.students.list.pdf');
+    Route::get('/reports/students/list-excel', [StudentController::class, 'exportStudentListExcel'])
+         ->name('reports.students.list.excel');
 
     // --- Route for Terms & Conditions PDF ---
     Route::get('/reports/terms-and-conditions', [StudentController::class, 'generateTermsAndConditionsPdf'])

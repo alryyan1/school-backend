@@ -64,6 +64,7 @@ class Enrollment extends Model
         'deportation',
         'deportation_type',
         'deportation_path_id',
+        'nearest_station',
     ];
 
     // Optional: Cast status if you create a PHP Enum later

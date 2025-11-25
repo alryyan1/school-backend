@@ -92,7 +92,7 @@ class StudentController extends Controller
             $referenceNumber = trim((string) $request->get('reference_number'));
             $query->whereHas('enrollments', function ($en) use ($referenceNumber) {
                 $en->whereHas('studentLedgers', function ($ledger) use ($referenceNumber) {
-                    $ledger->where('reference_number', 'like', "%{$referenceNumber}%");
+                    $ledger->where('reference_number', 'like', "{$referenceNumber}%");
                 });
             });
         }
@@ -260,7 +260,7 @@ class StudentController extends Controller
             $referenceNumber = trim((string) $request->get('reference_number'));
             $query->whereHas('enrollments', function ($en) use ($referenceNumber) {
                 $en->whereHas('studentLedgers', function ($ledger) use ($referenceNumber) {
-                    $ledger->where('reference_number', 'like', "%{$referenceNumber}%");
+                    $ledger->where('reference_number', 'like', "{$referenceNumber}%");
                 });
             });
         }
@@ -421,7 +421,7 @@ class StudentController extends Controller
             $referenceNumber = trim((string) $request->get('reference_number'));
             $query->whereHas('enrollments', function ($en) use ($referenceNumber) {
                 $en->whereHas('studentLedgers', function ($ledger) use ($referenceNumber) {
-                    $ledger->where('reference_number', 'like', "%{$referenceNumber}%");
+                    $ledger->where('reference_number', 'like', "{$referenceNumber}%");
                 });
             });
         }
@@ -892,71 +892,7 @@ class StudentController extends Controller
         // Authorization check (e.g., only admins/teachers)
         // $this->authorize('viewAny', Student::class);
 
-        // --- Fetch Students with Filters ---
-        $query = Student::with('wishedSchool'); // Start query builder with relationship
-
-        // Search term filter
-        if ($request->filled('search')) {
-            $searchTerm = $request->input('search');
-            $query->where(function($q) use ($searchTerm) {
-                $q->where('student_name', 'like', '%' . $searchTerm . '%')
-                  ->orWhere('father_name', 'like', '%' . $searchTerm . '%')
-                  ->orWhere('mother_name', 'like', '%' . $searchTerm . '%')
-                  ->orWhere('father_phone', 'like', '%' . $searchTerm . '%')
-                  ->orWhere('goverment_id', 'like', '%' . $searchTerm . '%');
-            });
-        }
-
-        // Wished school filter
-        if ($request->filled('wished_school_id')) {
-            $query->where('wished_school', $request->input('wished_school_id'));
-        }
-
-        // Date range filter
-        if ($request->filled('date_type') && ($request->filled('start_date') || $request->filled('end_date'))) {
-            $dateType = $request->input('date_type');
-            if ($request->filled('start_date')) {
-                $query->where($dateType, '>=', $request->input('start_date'));
-            }
-            if ($request->filled('end_date')) {
-                $query->where($dateType, '<=', $request->input('end_date'));
-            }
-        }
-
-        // Enrollment filter
-        if ($request->filled('only_enrolled') && $request->input('only_enrolled') === 'true') {
-            $query->whereHas('enrollments');
-        }
-
-        // Not enrolled filter
-        if ($request->filled('only_not_enrolled') && $request->input('only_not_enrolled') === 'true') {
-            $query->whereDoesntHave('enrollments');
-        }
-
-        // Approval filter
-        if ($request->filled('only_approved') && $request->input('only_approved') === 'true') {
-            $query->where('approved', true);
-        }
-
-        // Not approved filter
-        if ($request->filled('only_not_approved') && $request->input('only_not_approved') === 'true') {
-            $query->where('approved', false);
-        }
-
-        // Only students with no payments filter
-        if ($request->filled('only_no_payments') && $request->input('only_no_payments') === 'true') {
-            $query->whereHas('enrollments', function ($q) {
-                $q->whereDoesntHave('studentLedgers', function ($ledgerQuery) {
-                    $ledgerQuery->where('transaction_type', 'payment');
-                });
-            });
-        }
-
-        // Sorting
-        $sortBy = $request->input('sort_by', 'id');
-        $sortOrder = $request->input('sort_order', 'desc');
-        $query->orderBy($sortBy, $sortOrder);
-
+        $query = $this->buildStudentListQuery($request);
         $students = $query->get();
         // --- End Fetch Students ---
 
@@ -964,63 +900,7 @@ class StudentController extends Controller
         // --- PDF Creation ---
         $pdf = new StudentListPdf('P', PDF_UNIT, 'A4', true, 'UTF-8', false); // Portrait A4
 
-        // --- Set Filter Info for Header ---
-        $filterText = "جميع الطلاب"; // Default
-        $filters = [];
-        
-        if ($request->filled('search')) {
-            $filters[] = "بحث: " . $request->input('search');
-        }
-        
-        if ($request->filled('wished_school_id')) {
-            $school = \App\Models\School::find($request->input('wished_school_id'));
-            if ($school) {
-                $filters[] = "المدرسة: " . $school->name;
-            }
-        }
-        
-        if ($request->filled('date_type') && ($request->filled('start_date') || $request->filled('end_date'))) {
-            $dateType = $request->input('date_type') === 'created_at' ? 'تاريخ التسجيل' : 'تاريخ الميلاد';
-            $dateRange = [];
-            if ($request->filled('start_date')) {
-                $dateRange[] = "من: " . $request->input('start_date');
-            }
-            if ($request->filled('end_date')) {
-                $dateRange[] = "إلى: " . $request->input('end_date');
-            }
-            $filters[] = $dateType . " (" . implode(' - ', $dateRange) . ")";
-        }
-
-        // Add enrollment filter info
-        if ($request->filled('only_enrolled') && $request->input('only_enrolled') === 'true') {
-            $filters[] = "المسجلون فقط";
-        }
-
-        // Add not enrolled filter info
-        if ($request->filled('only_not_enrolled') && $request->input('only_not_enrolled') === 'true') {
-            $filters[] = "غير المسجلين";
-        }
-
-        // Add approval filter info
-        if ($request->filled('only_approved') && $request->input('only_approved') === 'true') {
-            $filters[] = "المقبولون فقط";
-        }
-
-        // Add not approved filter info
-        if ($request->filled('only_not_approved') && $request->input('only_not_approved') === 'true') {
-            $filters[] = "غير المقبولين";
-        }
-
-        // Add no payments filter info
-        if ($request->filled('only_no_payments') && $request->input('only_no_payments') === 'true') {
-            $filters[] = "غير مدفوع";
-        }
-        
-        if (!empty($filters)) {
-            $filterText = "فلترة: " . implode(' | ', $filters);
-        }
-        
-        $pdf->filterInfo = $filterText;
+        $pdf->filterInfo = $this->buildStudentListFilterDescription($request);
         // --- End Filter Info ---
 
 
@@ -1107,6 +987,200 @@ class StudentController extends Controller
         }
         $pdf->Output($fileName, 'I');
         exit;
+    }
+
+    public function exportStudentListExcel(Request $request)
+    {
+        $students = $this->buildStudentListQuery($request)->get();
+        $filterInfo = $this->buildStudentListFilterDescription($request);
+
+        $spreadsheet = new Spreadsheet();
+        $sheet = $spreadsheet->getActiveSheet();
+        $sheet->setTitle('قائمة الطلاب');
+        $sheet->setRightToLeft(true);
+
+        $currentRow = 1;
+        $sheet->mergeCells("A{$currentRow}:H{$currentRow}");
+        $sheet->setCellValue("A{$currentRow}", 'قائمة الطلاب');
+        $sheet->getStyle("A{$currentRow}")->getFont()->setBold(true)->setSize(14);
+        $sheet->getStyle("A{$currentRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+
+        $currentRow++;
+        $sheet->mergeCells("A{$currentRow}:H{$currentRow}");
+        $sheet->setCellValue("A{$currentRow}", $filterInfo);
+        $sheet->getStyle("A{$currentRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        $sheet->getStyle("A{$currentRow}")->getFont()->setItalic(true)->setSize(11);
+
+        $currentRow += 2;
+        $headers = [
+            'A' => 'الرقم',
+            'B' => 'اسم الطالب',
+            'C' => 'الجنس',
+            'D' => 'هاتف الأب',
+            'E' => 'المدرسة المرغوبة',
+            'F' => 'الحالة',
+            'G' => 'التسجيل',
+            'H' => 'تاريخ التسجيل',
+        ];
+
+        foreach ($headers as $column => $label) {
+            $sheet->setCellValue("{$column}{$currentRow}", $label);
+            $sheet->getStyle("{$column}{$currentRow}")->getFont()->setBold(true);
+            $sheet->getStyle("{$column}{$currentRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $sheet->getStyle("{$column}{$currentRow}")->getFill()
+                ->setFillType(Fill::FILL_SOLID)
+                ->getStartColor()->setARGB('FFE2E8F0');
+        }
+
+        $currentRow++;
+        foreach ($students as $student) {
+            $enrollmentStatus = $student->enrollments && $student->enrollments->count() > 0 ? 'مسجل' : 'غير مسجل';
+            $sheet->setCellValue("A{$currentRow}", $student->id);
+            $sheet->setCellValue("B{$currentRow}", $student->student_name);
+            $sheet->setCellValue("C{$currentRow}", $student->gender ?? '-');
+            $sheet->setCellValue("D{$currentRow}", $student->father_phone ?? '-');
+            $sheet->setCellValue("E{$currentRow}", $student->wishedSchool->name ?? '-');
+            $sheet->setCellValue("F{$currentRow}", $student->approved ? 'مقبول' : 'قيد المراجعة');
+            $sheet->setCellValue("G{$currentRow}", $enrollmentStatus);
+            $sheet->setCellValue("H{$currentRow}", optional($student->created_at)->format('Y-m-d'));
+            $currentRow++;
+        }
+
+        foreach (range('A', 'H') as $columnID) {
+            $sheet->getColumnDimension($columnID)->setAutoSize(true);
+        }
+
+        $fileName = 'student_list_' . now()->format('Y_m_d_His') . '.xlsx';
+        $writer = new Xlsx($spreadsheet);
+
+        ob_start();
+        $writer->save('php://output');
+        $excelOutput = ob_get_clean();
+
+        return response($excelOutput, 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'Content-Disposition' => "attachment; filename=\"{$fileName}\"",
+        ]);
+    }
+
+    protected function buildStudentListQuery(Request $request)
+    {
+        $query = Student::with([
+            'wishedSchool',
+            'enrollments.school',
+            'enrollments.gradeLevel',
+            'enrollments.classroom',
+        ]);
+
+        if ($request->filled('search')) {
+            $searchTerm = $request->input('search');
+            $query->where(function($q) use ($searchTerm) {
+                $q->where('student_name', 'like', '%' . $searchTerm . '%')
+                  ->orWhere('father_name', 'like', '%' . $searchTerm . '%')
+                  ->orWhere('mother_name', 'like', '%' . $searchTerm . '%')
+                  ->orWhere('father_phone', 'like', '%' . $searchTerm . '%')
+                  ->orWhere('goverment_id', 'like', '%' . $searchTerm . '%');
+            });
+        }
+
+        if ($request->filled('wished_school_id')) {
+            $query->where('wished_school', $request->input('wished_school_id'));
+        }
+
+        if ($request->filled('date_type') && ($request->filled('start_date') || $request->filled('end_date'))) {
+            $dateType = $request->input('date_type');
+            if ($request->filled('start_date')) {
+                $query->where($dateType, '>=', $request->input('start_date'));
+            }
+            if ($request->filled('end_date')) {
+                $query->where($dateType, '<=', $request->input('end_date'));
+            }
+        }
+
+        if ($request->filled('only_enrolled') && $request->input('only_enrolled') === 'true') {
+            $query->whereHas('enrollments');
+        }
+
+        if ($request->filled('only_not_enrolled') && $request->input('only_not_enrolled') === 'true') {
+            $query->whereDoesntHave('enrollments');
+        }
+
+        if ($request->filled('only_approved') && $request->input('only_approved') === 'true') {
+            $query->where('approved', true);
+        }
+
+        if ($request->filled('only_not_approved') && $request->input('only_not_approved') === 'true') {
+            $query->where('approved', false);
+        }
+
+        if ($request->filled('only_no_payments') && $request->input('only_no_payments') === 'true') {
+            $query->whereHas('enrollments', function ($q) {
+                $q->whereDoesntHave('studentLedgers', function ($ledgerQuery) {
+                    $ledgerQuery->where('transaction_type', 'payment');
+                });
+            });
+        }
+
+        $sortBy = $request->input('sort_by', 'id');
+        $sortOrder = $request->input('sort_order', 'desc');
+        $query->orderBy($sortBy, $sortOrder);
+
+        return $query;
+    }
+
+    protected function buildStudentListFilterDescription(Request $request): string
+    {
+        $filterText = "جميع الطلاب";
+        $filters = [];
+
+        if ($request->filled('search')) {
+            $filters[] = "بحث: " . $request->input('search');
+        }
+
+        if ($request->filled('wished_school_id')) {
+            $school = \App\Models\School::find($request->input('wished_school_id'));
+            if ($school) {
+                $filters[] = "المدرسة: " . $school->name;
+            }
+        }
+
+        if ($request->filled('date_type') && ($request->filled('start_date') || $request->filled('end_date'))) {
+            $dateType = $request->input('date_type') === 'created_at' ? 'تاريخ التسجيل' : 'تاريخ الميلاد';
+            $dateRange = [];
+            if ($request->filled('start_date')) {
+                $dateRange[] = "من: " . $request->input('start_date');
+            }
+            if ($request->filled('end_date')) {
+                $dateRange[] = "إلى: " . $request->input('end_date');
+            }
+            $filters[] = $dateType . " (" . implode(' - ', $dateRange) . ")";
+        }
+
+        if ($request->filled('only_enrolled') && $request->input('only_enrolled') === 'true') {
+            $filters[] = "المسجلون فقط";
+        }
+
+        if ($request->filled('only_not_enrolled') && $request->input('only_not_enrolled') === 'true') {
+            $filters[] = "غير المسجلين";
+        }
+
+        if ($request->filled('only_approved') && $request->input('only_approved') === 'true') {
+            $filters[] = "المقبولون فقط";
+        }
+
+        if ($request->filled('only_not_approved') && $request->input('only_not_approved') === 'true') {
+            $filters[] = "غير المقبولين";
+        }
+
+        if ($request->filled('only_no_payments') && $request->input('only_no_payments') === 'true') {
+            $filters[] = "غير مدفوع";
+        }
+
+        if (!empty($filters)) {
+            $filterText = "فلترة: " . implode(' | ', $filters);
+        }
+
+        return $filterText;
     }
 
     /**
@@ -1234,7 +1308,7 @@ class StudentController extends Controller
             $referenceNumber = trim((string) $request->get('reference_number'));
             $query->whereHas('enrollments', function ($en) use ($referenceNumber) {
                 $en->whereHas('studentLedgers', function ($ledger) use ($referenceNumber) {
-                    $ledger->where('reference_number', 'like', "%{$referenceNumber}%");
+                    $ledger->where('reference_number', 'like', "{$referenceNumber}%");
                 });
             });
         }

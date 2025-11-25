@@ -830,6 +830,7 @@ class EnrollmentController extends Controller
             'deportation' => 'required|boolean',
             'deportation_type' => ['nullable', Rule::in(['داخلي', 'خارجي'])],
             'deportation_path_id' => 'nullable|exists:deportation_paths,id',
+            'nearest_station' => 'nullable|string|max:255',
         ]);
 
         if ($validator->fails()) {
@@ -849,6 +850,7 @@ class EnrollmentController extends Controller
         if (!$validatedData['deportation']) {
             $validatedData['deportation_type'] = null;
             $validatedData['deportation_path_id'] = null;
+            $validatedData['nearest_station'] = null;
         }
 
         try {

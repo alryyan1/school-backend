@@ -117,6 +117,7 @@ class StudentResource extends JsonResource
                             'id' => $enrollment->deportationPath->id,
                             'name' => $enrollment->deportationPath->name,
                         ] : null,
+                        'nearest_station' => $enrollment->nearest_station,
                         // Aggregated fees info for this enrollment
                         'total_amount_required' => (float) ($enrollment->feeInstallments?->sum('amount_due') ?? 0),
                         'total_amount_paid' => (float) ($enrollment->feeInstallments?->sum('amount_paid') ?? 0),
