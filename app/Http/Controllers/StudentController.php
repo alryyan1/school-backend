@@ -1364,40 +1364,82 @@ class StudentController extends Controller
             $filterInfo[] = "البحث: " . $request->input('search');
         }
 
+        // Define all available columns with their mapping
+        $allColumns = [
+            'registration_id' => ['cell' => 'A', 'header' => 'رقم التسجيل', 'dataIndex' => 0],
+            'student_name' => ['cell' => 'B', 'header' => 'اسم الطالب', 'dataIndex' => 1],
+            'school' => ['cell' => 'C', 'header' => 'المدرسة', 'dataIndex' => 2],
+            'grade_level' => ['cell' => 'D', 'header' => 'المرحلة', 'dataIndex' => 3],
+            'classroom' => ['cell' => 'E', 'header' => 'الفصل', 'dataIndex' => 4],
+            'total_fees' => ['cell' => 'F', 'header' => 'الرسوم (دفتر)', 'dataIndex' => 5],
+            'total_payments' => ['cell' => 'G', 'header' => 'المدفوع (دفتر)', 'dataIndex' => 6],
+            'total_discounts' => ['cell' => 'H', 'header' => 'الخصومات', 'dataIndex' => 7],
+            'remaining' => ['cell' => 'I', 'header' => 'المتبقي', 'dataIndex' => 8],
+            'deportation' => ['cell' => 'J', 'header' => 'الترحيل', 'dataIndex' => 9],
+        ];
+
+        // Get selected columns from request, or use all if not specified
+        $selectedColumnKeys = [];
+        if ($request->filled('columns')) {
+            $selectedColumnKeys = explode(',', $request->input('columns'));
+            $selectedColumnKeys = array_filter(array_map('trim', $selectedColumnKeys));
+        }
+        
+        // If no columns specified or empty, use all columns
+        if (empty($selectedColumnKeys)) {
+            $selectedColumnKeys = array_keys($allColumns);
+        }
+
+        // Filter columns to only include selected ones
+        $selectedColumns = [];
+        $columnIndex = 0;
+        foreach ($selectedColumnKeys as $key) {
+            if (isset($allColumns[$key])) {
+                $col = $allColumns[$key];
+                $col['index'] = $columnIndex;
+                $selectedColumns[$key] = $col;
+                $columnIndex++;
+            }
+        }
+
+        // Calculate column count for merge cells
+        $columnCount = count($selectedColumns);
+        $firstCol = $this->getColumnLetter(0);
+        $lastCol = $this->getColumnLetter(max(0, $columnCount - 1));
+
         // Title row (row 1)
-        $sheet->mergeCells('A1:I1');
-        $sheet->setCellValue('A1', 'الايرادات - رسوم الطلاب (' . now()->format('Y-m-d H:i') . ')');
-        $sheet->getStyle('A1')->applyFromArray([
+        $sheet->mergeCells("{$firstCol}1:{$lastCol}1");
+        $sheet->setCellValue("{$firstCol}1", 'الايرادات - رسوم الطلاب (' . now()->format('Y-m-d H:i') . ')');
+        $sheet->getStyle("{$firstCol}1")->applyFromArray([
             'font' => ['bold' => true, 'size' => 14, 'color' => ['rgb' => '1F4E78']],
             'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER]
         ]);
 
         // Filter info row (row 2)
-        $sheet->mergeCells('A2:I2');
-        $sheet->setCellValue('A2', empty($filterInfo) ? 'بدون فلاتر' : ('فلترة: ' . implode(' | ', $filterInfo)));
-        $sheet->getStyle('A2')->applyFromArray([
+        $sheet->mergeCells("{$firstCol}2:{$lastCol}2");
+        $sheet->setCellValue("{$firstCol}2", empty($filterInfo) ? 'بدون فلاتر' : ('فلترة: ' . implode(' | ', $filterInfo)));
+        $sheet->getStyle("{$firstCol}2")->applyFromArray([
             'font' => ['italic' => true, 'size' => 10, 'color' => ['rgb' => '666666']],
             'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F2F2F2']]
         ]);
 
-        // Headers (row 3)
-        $headers = [
-            'A3' => 'رقم التسجيل',
-            'B3' => 'اسم الطالب',
-            'C3' => 'المدرسة',
-            'D3' => 'المرحلة',
-            'E3' => 'الفصل',
-            'F3' => 'الرسوم (دفتر)',
-            'G3' => 'المدفوع (دفتر)',
-            'H3' => 'الخصومات',
-            'I3' => 'المتبقي'
-        ];
+        // Build headers array with only selected columns
+        $headers = [];
+        $headerCells = [];
+        foreach ($selectedColumns as $key => $col) {
+            $cellRef = $this->getColumnLetter($col['index']) . '3';
+            $headers[$cellRef] = $col['header'];
+            $headerCells[] = $cellRef;
+        }
+        
         foreach ($headers as $cell => $value) {
             $sheet->setCellValue($cell, $value);
         }
 
-        // Style headers
-        $headerRange = 'A3:I3';
+        // Style headers - adjust range based on selected columns
+        $firstHeaderCell = $headerCells[0] ?? 'A3';
+        $lastHeaderCell = $headerCells[count($headerCells) - 1] ?? 'A3';
+        $headerRange = $firstHeaderCell . ':' . $lastHeaderCell;
         $sheet->getStyle($headerRange)->applyFromArray([
             'font' => [
                 'bold' => true,
@@ -1460,18 +1502,51 @@ class StudentController extends Controller
             $totalDiscounts = $summary ? $summary->total_discounts : 0;
             $remaining = max(0, $totalFees - $totalPayments - $totalDiscounts);
 
-            $sheet->setCellValue("A{$row}", (int)$enrollmentId);
-            $sheet->setCellValue("B{$row}", $student->student_name ?? '');
-            $sheet->setCellValue("C{$row}", $enrollment->school->name ?? '');
-            $sheet->setCellValue("D{$row}", $enrollment->gradeLevel->name ?? '');
-            $sheet->setCellValue("E{$row}", $enrollment->classroom->name ?? '');
-            $sheet->setCellValue("F{$row}", (float)$totalFees);
-            $sheet->setCellValue("G{$row}", (float)$totalPayments);
-            $sheet->setCellValue("H{$row}", (float)$totalDiscounts);
-            $sheet->setCellValue("I{$row}", (float)$remaining);
+            // Set cell values based on selected columns
+            foreach ($selectedColumns as $key => $col) {
+                $cellRef = $this->getColumnLetter($col['index']) . $row;
+                $value = '';
+                
+                switch ($key) {
+                    case 'registration_id':
+                        $value = (int)$enrollmentId;
+                        break;
+                    case 'student_name':
+                        $value = $student->student_name ?? '';
+                        break;
+                    case 'school':
+                        $value = $enrollment->school->name ?? '';
+                        break;
+                    case 'grade_level':
+                        $value = $enrollment->gradeLevel->name ?? '';
+                        break;
+                    case 'classroom':
+                        $value = $enrollment->classroom->name ?? '';
+                        break;
+                    case 'total_fees':
+                        $value = (float)$totalFees;
+                        break;
+                    case 'total_payments':
+                        $value = (float)$totalPayments;
+                        break;
+                    case 'total_discounts':
+                        $value = (float)$totalDiscounts;
+                        break;
+                    case 'remaining':
+                        $value = (float)$remaining;
+                        break;
+                    case 'deportation':
+                        $value = $enrollment->deportation ? 'نعم' : 'لا';
+                        break;
+                }
+                
+                $sheet->setCellValue($cellRef, $value);
+            }
 
-            // Style data rows
-            $dataRange = "A{$row}:I{$row}";
+            // Style data rows - adjust range based on selected columns
+            $firstDataCell = $this->getColumnLetter(0) . $row;
+            $lastDataCell = $this->getColumnLetter(count($selectedColumns) - 1) . $row;
+            $dataRange = "{$firstDataCell}:{$lastDataCell}";
             $sheet->getStyle($dataRange)->applyFromArray([
                 'alignment' => [
                     'horizontal' => Alignment::HORIZONTAL_CENTER,
@@ -1553,6 +1628,19 @@ class StudentController extends Controller
         $writer = new Xlsx($spreadsheet);
         $writer->save('php://output');
         exit;
+    }
+
+    /**
+     * Convert column index (0-based) to Excel column letter (A, B, C, ..., Z, AA, AB, ...)
+     */
+    private function getColumnLetter(int $index): string
+    {
+        $result = '';
+        while ($index >= 0) {
+            $result = chr(65 + ($index % 26)) . $result;
+            $index = intval($index / 26) - 1;
+        }
+        return $result;
     }
 
     /**

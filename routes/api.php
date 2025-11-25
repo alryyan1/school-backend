@@ -249,4 +249,10 @@ Route::prefix('student-ledger-deletions')->group(function () {
     Route::post('/whatsapp/send-document', [UltramsgController::class, 'sendDocument'])->name('whatsapp.sendDocument');
     Route::post('/whatsapp/bulk-send-text', [UltramsgController::class, 'bulkSendText'])->name('whatsapp.bulkSendText');
     Route::get('/whatsapp/bulk-send-status/{id}', [UltramsgController::class, 'getBulkSendStatus'])->name('whatsapp.bulkSendStatus');
+
+    // --- Database Backup ---
+    Route::post('/database-backup/create', [\App\Http\Controllers\DatabaseBackupController::class, 'create'])->name('database-backup.create');
+    Route::get('/database-backup/list', [\App\Http\Controllers\DatabaseBackupController::class, 'list'])->name('database-backup.list');
+    Route::get('/database-backup/download', [\App\Http\Controllers\DatabaseBackupController::class, 'download'])->name('database-backup.download');
+    Route::delete('/database-backup/delete', [\App\Http\Controllers\DatabaseBackupController::class, 'delete'])->name('database-backup.delete');
 });

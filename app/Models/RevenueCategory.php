@@ -12,6 +12,8 @@ class RevenueCategory extends Model
 
     protected $fillable = [
         'name',
+        'color',
+        'is_active',
     ];
 
     /**

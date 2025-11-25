@@ -50,13 +50,24 @@ class RevenueCategoryController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
+            'color' => 'sometimes|string|max:7|regex:/^#[0-9A-Fa-f]{6}$/',
+            'is_active' => 'sometimes|boolean',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $category = RevenueCategory::create($request->all());
+        $data = $request->all();
+        // Set defaults if not provided
+        if (!isset($data['color'])) {
+            $data['color'] = '#3B82F6';
+        }
+        if (!isset($data['is_active'])) {
+            $data['is_active'] = true;
+        }
+
+        $category = RevenueCategory::create($data);
 
         return response()->json(['data' => $category], 201);
     }
@@ -79,6 +90,8 @@ class RevenueCategoryController extends Controller
 
         $validator = Validator::make($request->all(), [
             'name' => 'sometimes|required|string|max:255',
+            'color' => 'sometimes|string|max:7|regex:/^#[0-9A-Fa-f]{6}$/',
+            'is_active' => 'sometimes|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -114,7 +127,9 @@ class RevenueCategoryController extends Controller
      */
     public function all()
     {
-        $categories = RevenueCategory::orderBy('name')->get(['id', 'name']);
+        $categories = RevenueCategory::where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name', 'color']);
 
         return response()->json(['data' => $categories]);
     }
