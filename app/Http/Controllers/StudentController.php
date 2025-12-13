@@ -894,13 +894,20 @@ class StudentController extends Controller
 
         $query = $this->buildStudentListQuery($request);
         $students = $query->get();
+        $studentCount = $students->count();
         // --- End Fetch Students ---
 
 
         // --- PDF Creation ---
         $pdf = new StudentListPdf('P', PDF_UNIT, 'A4', true, 'UTF-8', false); // Portrait A4
 
-        $pdf->filterInfo = $this->buildStudentListFilterDescription($request);
+        $filterDescription = $this->buildStudentListFilterDescription($request);
+        // Add student count to the filter info
+        if ($filterDescription !== "جميع الطلاب") {
+            $pdf->filterInfo = $filterDescription . " | عدد الطلاب: " . $studentCount;
+        } else {
+            $pdf->filterInfo = "عدد الطلاب: " . $studentCount;
+        }
         // --- End Filter Info ---
 
 
@@ -994,61 +1001,246 @@ class StudentController extends Controller
         $students = $this->buildStudentListQuery($request)->get();
         $filterInfo = $this->buildStudentListFilterDescription($request);
 
+        // Define all possible columns for export
+        $allColumns = [
+            'id' => ['header' => 'الرقم'],
+            'student_name' => ['header' => 'اسم الطالب'],
+            'father_phone' => ['header' => 'هاتف الأب'],
+            'mother_phone' => ['header' => 'هاتف الأم'],
+            'wished_school' => ['header' => 'المدرسة المرغوبة'],
+            'grade_level' => ['header' => 'المرحلة'],
+            'classroom' => ['header' => 'الفصل'],
+            'approved' => ['header' => 'الحالة'],
+            'enrollment_status' => ['header' => 'التسجيل'],
+            'date_of_birth' => ['header' => 'تاريخ الميلاد'],
+            'created_at' => ['header' => 'تاريخ التسجيل'],
+        ];
+
+        // Get selected columns from request, default to all
+        $requestedColumns = $request->filled('columns')
+            ? array_filter(explode(',', $request->input('columns')))
+            : array_keys($allColumns);
+
+        $selectedColumns = [];
+        $colIndex = 0;
+        foreach ($requestedColumns as $key) {
+            if (isset($allColumns[$key])) {
+                $selectedColumns[$key] = array_merge($allColumns[$key], ['index' => $colIndex]);
+                $colIndex++;
+            }
+        }
+
+        // If nothing valid selected, fall back to all
+        if (empty($selectedColumns)) {
+            $colIndex = 0;
+            foreach ($allColumns as $key => $col) {
+                $selectedColumns[$key] = array_merge($col, ['index' => $colIndex]);
+                $colIndex++;
+            }
+        }
+
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('قائمة الطلاب');
         $sheet->setRightToLeft(true);
 
-        $currentRow = 1;
-        $sheet->mergeCells("A{$currentRow}:H{$currentRow}");
-        $sheet->setCellValue("A{$currentRow}", 'قائمة الطلاب');
-        $sheet->getStyle("A{$currentRow}")->getFont()->setBold(true)->setSize(14);
-        $sheet->getStyle("A{$currentRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        // Calculate column letters based on selection
+        $columnCount = count($selectedColumns);
+        $firstCol = $this->getColumnLetter(0);
+        $lastCol = $this->getColumnLetter(max(0, $columnCount - 1));
 
-        $currentRow++;
-        $sheet->mergeCells("A{$currentRow}:H{$currentRow}");
-        $sheet->setCellValue("A{$currentRow}", $filterInfo);
-        $sheet->getStyle("A{$currentRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-        $sheet->getStyle("A{$currentRow}")->getFont()->setItalic(true)->setSize(11);
+        // Title row
+        $sheet->mergeCells("{$firstCol}1:{$lastCol}1");
+        $sheet->setCellValue("{$firstCol}1", 'قائمة الطلاب');
+        $titleStyle = $sheet->getStyle("{$firstCol}1");
+        $titleStyle->getFont()->setBold(true)->setSize(16);
+        $titleStyle->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+        $titleStyle->getFill()
+            ->setFillType(Fill::FILL_SOLID)
+            ->getStartColor()->setARGB('FF1E40AF'); // Dark blue background
+        $titleStyle->getFont()->getColor()->setARGB('FFFFFFFF'); // White text
+        $sheet->getRowDimension(1)->setRowHeight(30);
 
-        $currentRow += 2;
-        $headers = [
-            'A' => 'الرقم',
-            'B' => 'اسم الطالب',
-            'C' => 'الجنس',
-            'D' => 'هاتف الأب',
-            'E' => 'المدرسة المرغوبة',
-            'F' => 'الحالة',
-            'G' => 'التسجيل',
-            'H' => 'تاريخ التسجيل',
+        // Filter info row
+        $sheet->mergeCells("{$firstCol}2:{$lastCol}2");
+        $sheet->setCellValue("{$firstCol}2", $filterInfo);
+        $filterStyle = $sheet->getStyle("{$firstCol}2");
+        $filterStyle->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+        $filterStyle->getFont()->setItalic(true)->setSize(10);
+        $filterStyle->getFill()
+            ->setFillType(Fill::FILL_SOLID)
+            ->getStartColor()->setARGB('FFF1F5F9'); // Light gray background
+        $sheet->getRowDimension(2)->setRowHeight(25);
+
+        // Header row (row 4)
+        $headerRow = 4;
+        $headerStyleArray = [
+            'font' => [
+                'bold' => true,
+                'size' => 11,
+                'color' => ['rgb' => 'FFFFFF'],
+            ],
+            'fill' => [
+                'fillType' => Fill::FILL_SOLID,
+                'startColor' => ['rgb' => '1E40AF'], // Dark blue
+            ],
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                'vertical' => Alignment::VERTICAL_CENTER,
+                'wrapText' => true,
+            ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => Border::BORDER_THIN,
+                    'color' => ['rgb' => '000000'],
+                ],
+            ],
         ];
 
-        foreach ($headers as $column => $label) {
-            $sheet->setCellValue("{$column}{$currentRow}", $label);
-            $sheet->getStyle("{$column}{$currentRow}")->getFont()->setBold(true);
-            $sheet->getStyle("{$column}{$currentRow}")->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
-            $sheet->getStyle("{$column}{$currentRow}")->getFill()
-                ->setFillType(Fill::FILL_SOLID)
-                ->getStartColor()->setARGB('FFE2E8F0');
+        foreach ($selectedColumns as $key => $col) {
+            $colLetter = $this->getColumnLetter($col['index']);
+            $cellRef = "{$colLetter}{$headerRow}";
+            $sheet->setCellValue($cellRef, $col['header']);
+            $sheet->getStyle($cellRef)->applyFromArray($headerStyleArray);
         }
+        $sheet->getRowDimension($headerRow)->setRowHeight(25);
 
-        $currentRow++;
+        // Data rows start at row 5
+        $currentRow = $headerRow + 1;
+        $dataStyleArray = [
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                'vertical' => Alignment::VERTICAL_CENTER,
+            ],
+            'borders' => [
+                'allBorders' => [
+                    'borderStyle' => Border::BORDER_THIN,
+                    'color' => ['rgb' => 'CCCCCC'],
+                ],
+            ],
+        ];
+
         foreach ($students as $student) {
+            $activeEnrollment = $student->enrollments
+                ? $student->enrollments->firstWhere('status', 'active') ?? $student->enrollments->first()
+                : null;
             $enrollmentStatus = $student->enrollments && $student->enrollments->count() > 0 ? 'مسجل' : 'غير مسجل';
-            $sheet->setCellValue("A{$currentRow}", $student->id);
-            $sheet->setCellValue("B{$currentRow}", $student->student_name);
-            $sheet->setCellValue("C{$currentRow}", $student->gender ?? '-');
-            $sheet->setCellValue("D{$currentRow}", $student->father_phone ?? '-');
-            $sheet->setCellValue("E{$currentRow}", $student->wishedSchool->name ?? '-');
-            $sheet->setCellValue("F{$currentRow}", $student->approved ? 'مقبول' : 'قيد المراجعة');
-            $sheet->setCellValue("G{$currentRow}", $enrollmentStatus);
-            $sheet->setCellValue("H{$currentRow}", optional($student->created_at)->format('Y-m-d'));
+
+            foreach ($selectedColumns as $key => $col) {
+                $colLetter = $this->getColumnLetter($col['index']);
+                $cellRef = "{$colLetter}{$currentRow}";
+                $value = '';
+
+                switch ($key) {
+                    case 'id':
+                        $value = $student->id;
+                        break;
+                    case 'student_name':
+                        $value = $student->student_name;
+                        break;
+                    case 'father_phone':
+                        $value = $student->father_phone ?? '-';
+                        break;
+                    case 'mother_phone':
+                        $value = $student->mother_phone ?? '-';
+                        break;
+                    case 'wished_school':
+                        $value = optional($student->wishedSchool)->name ?? '-';
+                        break;
+                    case 'grade_level':
+                        $value = $activeEnrollment && $activeEnrollment->gradeLevel
+                            ? $activeEnrollment->gradeLevel->name
+                            : '-';
+                        break;
+                    case 'classroom':
+                        $value = $activeEnrollment && $activeEnrollment->classroom
+                            ? $activeEnrollment->classroom->name
+                            : '-';
+                        break;
+                    case 'approved':
+                        $value = $student->approved ? 'مقبول' : 'قيد المراجعة';
+                        break;
+                    case 'enrollment_status':
+                        $value = $enrollmentStatus;
+                        break;
+                    case 'date_of_birth':
+                        $value = optional($student->date_of_birth)->format('Y-m-d');
+                        break;
+                    case 'created_at':
+                        $value = optional($student->created_at)->format('Y-m-d');
+                        break;
+                }
+
+                $sheet->setCellValue($cellRef, $value);
+                $sheet->getStyle($cellRef)->applyFromArray($dataStyleArray);
+            }
+
+            // Alternate row colors for better readability
+            if ($currentRow % 2 == 0) {
+                foreach ($selectedColumns as $col) {
+                    $colLetter = $this->getColumnLetter($col['index']);
+                    $cellRef = "{$colLetter}{$currentRow}";
+                    $sheet->getStyle($cellRef)->getFill()
+                        ->setFillType(Fill::FILL_SOLID)
+                        ->getStartColor()->setARGB('FFF8F9FA'); // Very light gray
+                }
+            }
+
             $currentRow++;
         }
 
-        foreach (range('A', 'H') as $columnID) {
-            $sheet->getColumnDimension($columnID)->setAutoSize(true);
+        // Set column widths (auto-size with minimum and maximum constraints)
+        foreach ($selectedColumns as $key => $col) {
+            $colLetter = $this->getColumnLetter($col['index']);
+            $sheet->getColumnDimension($colLetter)->setAutoSize(true);
+            
+            // Set minimum and maximum widths based on column type
+            $minWidth = 8;
+            $maxWidth = 50;
+            
+            if (in_array($key, ['id'])) {
+                $minWidth = 8;
+                $maxWidth = 12;
+            } elseif (in_array($key, ['student_name', 'wished_school'])) {
+                $minWidth = 20;
+                $maxWidth = 40;
+            } elseif (in_array($key, ['father_phone', 'mother_phone'])) {
+                $minWidth = 15;
+                $maxWidth = 20;
+            } elseif (in_array($key, ['date_of_birth', 'created_at'])) {
+                $minWidth = 12;
+                $maxWidth = 15;
+            }
+            
+            $currentWidth = $sheet->getColumnDimension($colLetter)->getWidth();
+            if ($currentWidth < $minWidth) {
+                $sheet->getColumnDimension($colLetter)->setWidth($minWidth);
+            } elseif ($currentWidth > $maxWidth) {
+                $sheet->getColumnDimension($colLetter)->setWidth($maxWidth);
+            }
         }
+
+        // Add auto-filter to header row
+        $sheet->setAutoFilter("{$firstCol}{$headerRow}:{$lastCol}{$headerRow}");
+
+        // Freeze panes (freeze header row and first column)
+        $freezeCell = $this->getColumnLetter(0) . ($headerRow + 1);
+        $sheet->freezePane($freezeCell);
+
+        // Set print settings
+        $sheet->getPageSetup()->setOrientation(PageSetup::ORIENTATION_LANDSCAPE);
+        $sheet->getPageSetup()->setPaperSize(PageSetup::PAPERSIZE_A4);
+        $sheet->getPageSetup()->setFitToWidth(1);
+        $sheet->getPageSetup()->setFitToHeight(0);
+
+        // Set print margins
+        $sheet->getPageMargins()->setTop(0.75);
+        $sheet->getPageMargins()->setRight(0.75);
+        $sheet->getPageMargins()->setBottom(0.75);
+        $sheet->getPageMargins()->setLeft(0.75);
+
+        // Set header row to repeat on each page
+        $sheet->getPageSetup()->setRowsToRepeatAtTopByStartAndEnd($headerRow, $headerRow);
 
         $fileName = 'student_list_' . now()->format('Y_m_d_His') . '.xlsx';
         $writer = new Xlsx($spreadsheet);
@@ -1085,6 +1277,20 @@ class StudentController extends Controller
 
         if ($request->filled('wished_school_id')) {
             $query->where('wished_school', $request->input('wished_school_id'));
+        }
+
+        if ($request->filled('grade_level_id')) {
+            $query->whereHas('enrollments', function ($q) use ($request) {
+                $q->where('grade_level_id', $request->get('grade_level_id'))
+                  ->where('status', 'active');
+            });
+        }
+
+        if ($request->filled('classroom_id')) {
+            $query->whereHas('enrollments', function ($q) use ($request) {
+                $q->where('classroom_id', $request->get('classroom_id'))
+                  ->where('status', 'active');
+            });
         }
 
         if ($request->filled('date_type') && ($request->filled('start_date') || $request->filled('end_date'))) {
@@ -1141,6 +1347,20 @@ class StudentController extends Controller
             $school = \App\Models\School::find($request->input('wished_school_id'));
             if ($school) {
                 $filters[] = "المدرسة: " . $school->name;
+            }
+        }
+
+        if ($request->filled('grade_level_id')) {
+            $gradeLevel = \App\Models\GradeLevel::find($request->input('grade_level_id'));
+            if ($gradeLevel) {
+                $filters[] = "المرحلة: " . $gradeLevel->name;
+            }
+        }
+
+        if ($request->filled('classroom_id')) {
+            $classroom = \App\Models\Classroom::find($request->input('classroom_id'));
+            if ($classroom) {
+                $filters[] = "الفصل: " . $classroom->name;
             }
         }
 
