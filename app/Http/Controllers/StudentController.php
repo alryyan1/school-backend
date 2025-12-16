@@ -894,20 +894,13 @@ class StudentController extends Controller
 
         $query = $this->buildStudentListQuery($request);
         $students = $query->get();
-        $studentCount = $students->count();
         // --- End Fetch Students ---
 
 
         // --- PDF Creation ---
         $pdf = new StudentListPdf('P', PDF_UNIT, 'A4', true, 'UTF-8', false); // Portrait A4
 
-        $filterDescription = $this->buildStudentListFilterDescription($request);
-        // Add student count to the filter info
-        if ($filterDescription !== "جميع الطلاب") {
-            $pdf->filterInfo = $filterDescription . " | عدد الطلاب: " . $studentCount;
-        } else {
-            $pdf->filterInfo = "عدد الطلاب: " . $studentCount;
-        }
+        $pdf->filterInfo = $this->buildStudentListFilterDescription($request);
         // --- End Filter Info ---
 
 
@@ -1009,7 +1002,6 @@ class StudentController extends Controller
             'mother_phone' => ['header' => 'هاتف الأم'],
             'wished_school' => ['header' => 'المدرسة المرغوبة'],
             'grade_level' => ['header' => 'المرحلة'],
-            'classroom' => ['header' => 'الفصل'],
             'approved' => ['header' => 'الحالة'],
             'enrollment_status' => ['header' => 'التسجيل'],
             'date_of_birth' => ['header' => 'تاريخ الميلاد'],
@@ -1152,11 +1144,6 @@ class StudentController extends Controller
                             ? $activeEnrollment->gradeLevel->name
                             : '-';
                         break;
-                    case 'classroom':
-                        $value = $activeEnrollment && $activeEnrollment->classroom
-                            ? $activeEnrollment->classroom->name
-                            : '-';
-                        break;
                     case 'approved':
                         $value = $student->approved ? 'مقبول' : 'قيد المراجعة';
                         break;
@@ -1279,20 +1266,6 @@ class StudentController extends Controller
             $query->where('wished_school', $request->input('wished_school_id'));
         }
 
-        if ($request->filled('grade_level_id')) {
-            $query->whereHas('enrollments', function ($q) use ($request) {
-                $q->where('grade_level_id', $request->get('grade_level_id'))
-                  ->where('status', 'active');
-            });
-        }
-
-        if ($request->filled('classroom_id')) {
-            $query->whereHas('enrollments', function ($q) use ($request) {
-                $q->where('classroom_id', $request->get('classroom_id'))
-                  ->where('status', 'active');
-            });
-        }
-
         if ($request->filled('date_type') && ($request->filled('start_date') || $request->filled('end_date'))) {
             $dateType = $request->input('date_type');
             if ($request->filled('start_date')) {
@@ -1347,20 +1320,6 @@ class StudentController extends Controller
             $school = \App\Models\School::find($request->input('wished_school_id'));
             if ($school) {
                 $filters[] = "المدرسة: " . $school->name;
-            }
-        }
-
-        if ($request->filled('grade_level_id')) {
-            $gradeLevel = \App\Models\GradeLevel::find($request->input('grade_level_id'));
-            if ($gradeLevel) {
-                $filters[] = "المرحلة: " . $gradeLevel->name;
-            }
-        }
-
-        if ($request->filled('classroom_id')) {
-            $classroom = \App\Models\Classroom::find($request->input('classroom_id'));
-            if ($classroom) {
-                $filters[] = "الفصل: " . $classroom->name;
             }
         }
 
