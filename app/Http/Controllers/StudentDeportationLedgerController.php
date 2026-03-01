@@ -110,7 +110,6 @@ class StudentDeportationLedgerController extends Controller
                 'ledger_entry' => new StudentDeportationLedgerResource($ledgerEntry),
                 'new_balance' => $ledgerEntry->balance_after,
             ], 201);
-
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
@@ -265,6 +264,57 @@ class StudentDeportationLedgerController extends Controller
         // Output PDF
         $pdf->Output($filename, 'I');
     }
+
+    /**
+     * Delete a deportation ledger entry and log it.
+     */
+    public function destroy(Request $request, $ledgerEntryId): JsonResponse
+    {
+        $request->validate([
+            'deletion_reason' => 'required|string|max:500',
+        ]);
+
+        $ledgerEntry = StudentDeportationLedger::with(['createdBy'])->findOrFail($ledgerEntryId);
+
+        try {
+            DB::beginTransaction();
+
+            // Log the deletion with all original data
+            \App\Models\StudentLedgerDeletion::create([
+                'ledger_entry_id' => $ledgerEntry->id,
+                'enrollment_id' => $ledgerEntry->enrollment_id,
+                'student_id' => $ledgerEntry->student_id,
+                'transaction_type' => $ledgerEntry->transaction_type,
+                'description' => '[Deportation] ' . $ledgerEntry->description,
+                'amount' => $ledgerEntry->amount,
+                'transaction_date' => $ledgerEntry->transaction_date,
+                'balance_before' => 0, // Deportation ledger doesn't use running balance in DB
+                'balance_after' => $ledgerEntry->balance_after ?? 0,
+                'reference_number' => $ledgerEntry->reference_number,
+                'payment_method' => $ledgerEntry->payment_method,
+                'metadata' => $ledgerEntry->metadata,
+                'original_created_by' => $ledgerEntry->created_by,
+                'original_created_at' => $ledgerEntry->created_at,
+                'deleted_by' => Auth::id(),
+                'deletion_reason' => $request->deletion_reason,
+                'deleted_at' => now(),
+            ]);
+
+            // Delete the entry
+            $ledgerEntry->delete();
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Deportation ledger entry deleted successfully',
+                'new_balance' => StudentDeportationLedger::getCurrentBalance($ledgerEntry->enrollment_id),
+            ], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'Failed to delete deportation ledger entry',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
 }
-
-

@@ -30,15 +30,25 @@ return [
         'secret' => env('AWS_SECRET_ACCESS_KEY'),
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
+
     'ultramsg' => [
         'base_url' => env('ULTRAMSG_BASE_URL', 'https://api.ultramsg.com'),
         'instance_id' => env('ULTRAMSG_INSTANCE_ID'),
         'token' => env('ULTRAMSG_TOKEN'),
     ],
+
     'waapi' => [
         'url' => env('WAAPI_URL'),
-        'instance_id' => env('WAAPI_INSTANCE_ID'), // <-- Add Instance ID
+        'instance_id' => env('WAAPI_INSTANCE_ID'),
         'token' => env('WAAPI_TOKEN'),
         'default_country_code' => env('WAAPI_DEFAULT_COUNTRY_CODE', '249'),
+    ],
+
+    'airtel_sms' => [
+        'base_url'       => env('AIRTEL_SMS_BASE_URL', 'https://www.airtel.sd'),
+        'endpoint'       => env('AIRTEL_SMS_ENDPOINT', '/api/rest_send_sms/'),
+        'api_key'        => env('AIRTEL_SMS_API_KEY'),
+        'default_sender' => env('AIRTEL_SMS_SENDER', 'Jawdah'),
+        'timeout'        => (int) env('AIRTEL_SMS_TIMEOUT', 15),
     ],
 ];

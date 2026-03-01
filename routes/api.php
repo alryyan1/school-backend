@@ -112,7 +112,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // --- ACADEMIC YEAR SUBJECT ROUTES ---
     // Usually accessed via index with filters, but include all methods for flexibility
     Route::apiResource('/academic-year-subjects', AcademicYearSubjectController::class);
-    
+
     // --- GRADE LEVEL SUBJECT ROUTES ---
     Route::get('/grade-level-subjects/{gradeLevelId}', [GradeLevelSubjectController::class, 'getAllByGradeLevel']);
     Route::post('/grade-level-subjects', [GradeLevelSubjectController::class, 'create']);
@@ -134,11 +134,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/enrollments/{enrollment}/assign-classroom', [EnrollmentController::class, 'assignToClassroom']);
     Route::put('/enrollments/{enrollment}/change-type', [EnrollmentController::class, 'changeEnrollmentType']);
     Route::put('/enrollments/{enrollment}/deportation', [EnrollmentController::class, 'updateDeportation']);
-    
+    Route::delete('/enrollments/{enrollment}/deportation', [EnrollmentController::class, 'cancelDeportation']);
+
     // Enrollment logs routes
     Route::get('/enrollments/{enrollment}/logs', [EnrollmentController::class, 'getLogs']);
     Route::get('/students/{student}/enrollment-logs', [EnrollmentController::class, 'getStudentLogs']);
-    
+
     // General enrollment logs routes
     Route::get('/enrollment-logs', [EnrollmentLogController::class, 'index']);
     Route::get('/enrollment-logs/statistics', [EnrollmentLogController::class, 'statistics']);
@@ -146,36 +147,37 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // --- STUDENT FEE PAYMENT ROUTES ---
     Route::apiResource('/student-fee-payments', StudentFeePaymentController::class);
-    
+
     // --- STUDENT LEDGER ROUTES ---
-Route::prefix('student-ledgers')->group(function () {
-    Route::get('/enrollment/{enrollmentId}', [\App\Http\Controllers\StudentLedgerController::class, 'show']);
-    Route::post('/', [\App\Http\Controllers\StudentLedgerController::class, 'store']);
-    Route::post('/summary', [\App\Http\Controllers\StudentLedgerController::class, 'summary']);
-    Route::get('/student/{studentId}', [\App\Http\Controllers\StudentLedgerController::class, 'studentLedger']);
-    Route::get('/by-payment-method', [\App\Http\Controllers\StudentLedgerController::class, 'byPaymentMethod']);
-    Route::delete('/{ledgerEntryId}', [\App\Http\Controllers\StudentLedgerController::class, 'destroy']);
-});
+    Route::prefix('student-ledgers')->group(function () {
+        Route::get('/enrollment/{enrollmentId}', [\App\Http\Controllers\StudentLedgerController::class, 'show']);
+        Route::post('/', [\App\Http\Controllers\StudentLedgerController::class, 'store']);
+        Route::post('/summary', [\App\Http\Controllers\StudentLedgerController::class, 'summary']);
+        Route::get('/student/{studentId}', [\App\Http\Controllers\StudentLedgerController::class, 'studentLedger']);
+        Route::get('/by-payment-method', [\App\Http\Controllers\StudentLedgerController::class, 'byPaymentMethod']);
+        Route::delete('/{ledgerEntryId}', [\App\Http\Controllers\StudentLedgerController::class, 'destroy']);
+    });
 
     // --- STUDENT DEPORTATION LEDGER ROUTES ---
-Route::prefix('student-deportation-ledgers')->group(function () {
-    Route::get('/enrollment/{enrollmentId}', [\App\Http\Controllers\StudentDeportationLedgerController::class, 'show']);
-    Route::post('/', [\App\Http\Controllers\StudentDeportationLedgerController::class, 'store']);
-    Route::post('/summary', [\App\Http\Controllers\StudentDeportationLedgerController::class, 'summary']);
-    Route::get('/student/{studentId}', [\App\Http\Controllers\StudentDeportationLedgerController::class, 'studentLedger']);
-});
+    Route::prefix('student-deportation-ledgers')->group(function () {
+        Route::get('/enrollment/{enrollmentId}', [\App\Http\Controllers\StudentDeportationLedgerController::class, 'show']);
+        Route::post('/', [\App\Http\Controllers\StudentDeportationLedgerController::class, 'store']);
+        Route::post('/summary', [\App\Http\Controllers\StudentDeportationLedgerController::class, 'summary']);
+        Route::get('/student/{studentId}', [\App\Http\Controllers\StudentDeportationLedgerController::class, 'studentLedger']);
+        Route::delete('/{ledgerEntryId}', [\App\Http\Controllers\StudentDeportationLedgerController::class, 'destroy']);
+    });
 
     // --- STUDENT LEDGER DELETION ROUTES ---
-Route::prefix('student-ledger-deletions')->group(function () {
-    Route::get('/', [\App\Http\Controllers\StudentLedgerDeletionController::class, 'index']);
-    Route::get('/{id}', [\App\Http\Controllers\StudentLedgerDeletionController::class, 'show']);
-});
-    
+    Route::prefix('student-ledger-deletions')->group(function () {
+        Route::get('/', [\App\Http\Controllers\StudentLedgerDeletionController::class, 'index']);
+        Route::get('/{id}', [\App\Http\Controllers\StudentLedgerDeletionController::class, 'show']);
+    });
+
     // --- FEE INSTALLMENT ROUTES ---
     Route::apiResource('/fee-installments', FeeInstallmentController::class); // <-- Add this
     // --- Route to get installments due soon ---
     Route::get('/fee-installment/due-soon', [FeeInstallmentController::class, 'getDueSoon'])
-         ->name('installments.dueSoon');
+        ->name('installments.dueSoon');
     // --- Add route for generating installments ---
     Route::post('/enrollments/{enrollment}/generate-installments', [FeeInstallmentController::class, 'generateInstallments'])
         ->name('enrollments.installments.generate');
@@ -193,27 +195,27 @@ Route::prefix('student-ledger-deletions')->group(function () {
     // --- TRANSPORTATION ROUTES ---
     Route::apiResource('/transport-routes', TransportRouteController::class);
     Route::apiResource('/student-transport-assignments', StudentTransportAssignmentController::class)->except(['show']); // show 
-     // --- Route for sending installment reminder ---
-     Route::post('/notify/whatsapp/installment/{feeInstallment}', [NotificationController::class, 'sendInstallmentReminder'])
-     ->name('notify.installment.whatsapp');
+    // --- Route for sending installment reminder ---
+    Route::post('/notify/whatsapp/installment/{feeInstallment}', [NotificationController::class, 'sendInstallmentReminder'])
+        ->name('notify.installment.whatsapp');
 
 
-     Route::apiResource('/payment-methods', \App\Http\Controllers\PaymentMethodController::class)->only(['index','store']);
- 
-     // --- ROLE ROUTE ---
-     Route::get('/roles', [RoleController::class, 'index'])->name('roles.index'); // Get all roles
- 
-     // --- USER MANAGEMENT ROUTES ---
-     Route::get('/curriculum/subjects-for-grade', [AcademicYearSubjectController::class, 'getSubjectsForGradeLevel'])->name('curriculum.subjectsForGrade');
+    Route::apiResource('/payment-methods', \App\Http\Controllers\PaymentMethodController::class)->only(['index', 'store']);
 
-     Route::post('/exams/{exam}/quick-add-schedules', [ExamScheduleController::class, 'quickAddSchedulesForGrade'])->name('exams.schedules.quickAdd'); // <-- New Route
-     // --- EXAM RESULT ROUTES ---
-     Route::get('/students/{student}/relevant-exams', [ExamController::class, 'getRelevantExamsForStudent'])->name('students.relevantExams');
-     Route::get('/exam-schedules/{examSchedule}/results', [ExamResultController::class, 'getResultsForSchedule']);
-     Route::get('/exam-schedules/{examSchedule}/pending-students-for-results', [ExamResultController::class, 'getPendingStudentsForResults']);
-     Route::post('/exam-schedules/{examSchedule}/results/bulk-upsert', [ExamResultController::class, 'bulkUpsertResults']);
-     // Keep these if you want to manage individual results, otherwise, they can be removed
-     Route::apiResource('/exam-results', ExamResultController::class)->except(['index', 'store']);
+    // --- ROLE ROUTE ---
+    Route::get('/roles', [RoleController::class, 'index'])->name('roles.index'); // Get all roles
+
+    // --- USER MANAGEMENT ROUTES ---
+    Route::get('/curriculum/subjects-for-grade', [AcademicYearSubjectController::class, 'getSubjectsForGradeLevel'])->name('curriculum.subjectsForGrade');
+
+    Route::post('/exams/{exam}/quick-add-schedules', [ExamScheduleController::class, 'quickAddSchedulesForGrade'])->name('exams.schedules.quickAdd'); // <-- New Route
+    // --- EXAM RESULT ROUTES ---
+    Route::get('/students/{student}/relevant-exams', [ExamController::class, 'getRelevantExamsForStudent'])->name('students.relevantExams');
+    Route::get('/exam-schedules/{examSchedule}/results', [ExamResultController::class, 'getResultsForSchedule']);
+    Route::get('/exam-schedules/{examSchedule}/pending-students-for-results', [ExamResultController::class, 'getPendingStudentsForResults']);
+    Route::post('/exam-schedules/{examSchedule}/results/bulk-upsert', [ExamResultController::class, 'bulkUpsertResults']);
+    // Keep these if you want to manage individual results, otherwise, they can be removed
+    Route::apiResource('/exam-results', ExamResultController::class)->except(['index', 'store']);
 
     // --- ROLE & PERMISSION ROUTES ---
     Route::get('/permissions', [RoleController::class, 'getAllPermissions'])->name('permissions.index'); // <-- THIS IS THE ROUTE
@@ -223,11 +225,11 @@ Route::prefix('student-ledger-deletions')->group(function () {
     Route::apiResource('student-notes', StudentNoteController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::get('student-notes/pdf', [StudentNoteController::class, 'generatePdf'])->name('student-notes.api.pdf');
     // --- Student Warnings ---
-    Route::apiResource('student-warnings', StudentWarningController::class)->only(['index','store','update','destroy']);
+    Route::apiResource('student-warnings', StudentWarningController::class)->only(['index', 'store', 'update', 'destroy']);
     Route::get('student-warnings/{studentWarning}/pdf', [StudentWarningController::class, 'generatePdf'])->name('student-warnings.api.pdf');
     // --- Student Absences ---
-    Route::apiResource('student-absences', StudentAbsenceController::class)->only(['index','store','update','destroy']);
-    
+    Route::apiResource('student-absences', StudentAbsenceController::class)->only(['index', 'store', 'update', 'destroy']);
+
     // --- EXPENSE ROUTES ---
     Route::apiResource('expenses', ExpenseController::class);
     Route::get('expenses-statistics', [ExpenseController::class, 'statistics'])->name('expenses.statistics');
@@ -249,6 +251,9 @@ Route::prefix('student-ledger-deletions')->group(function () {
     Route::post('/whatsapp/send-document', [UltramsgController::class, 'sendDocument'])->name('whatsapp.sendDocument');
     Route::post('/whatsapp/bulk-send-text', [UltramsgController::class, 'bulkSendText'])->name('whatsapp.bulkSendText');
     Route::get('/whatsapp/bulk-send-status/{id}', [UltramsgController::class, 'getBulkSendStatus'])->name('whatsapp.bulkSendStatus');
+
+    // --- Airtel SMS ---
+    Route::post('/sms/send', [\App\Http\Controllers\SmsController::class, 'send'])->name('sms.send');
 
     // --- Database Backup ---
     Route::post('/database-backup/create', [\App\Http\Controllers\DatabaseBackupController::class, 'create'])->name('database-backup.create');

@@ -29,11 +29,11 @@ class EnrollmentController extends Controller
                 'grade_level_id' => 'sometimes|required|exists:grade_levels,id', // Optional filter
                 'classroom_id' => 'sometimes|required|exists:classrooms,id', // Optional filter
             ]);
-    
+
             if ($validator->fails()) {
                 return response()->json(['message' => 'الرجاء تحديد العام الدراسي على الأقل', 'errors' => $validator->errors()], 422);
             }
-    
+
             // Build query with proper table references
             $query = Enrollment::with([
                 'student', // Select only needed student columns
@@ -43,27 +43,28 @@ class EnrollmentController extends Controller
             ])
                 ->where('enrollments.school_id', $request->input('school_id')) // Filter by school
                 ->where('enrollments.academic_year', $request->input('academic_year')); // Filter by year
-    
+
             if ($request->filled('grade_level_id')) {
                 $query->where('enrollments.grade_level_id', $request->input('grade_level_id'));
             }
             if ($request->filled('classroom_id')) {
                 $query->where('enrollments.classroom_id', $request->input('classroom_id'));
             }
-    
+
             // Join with students table for ordering
             $query->join('students', 'enrollments.student_id', '=', 'students.id')
                 ->orderBy('students.student_name');
-    
+
             $enrollments = $query->select('enrollments.*')->get(); // Select only columns from enrollments after join
-    
+
             return EnrollmentResource::collection($enrollments);
         } catch (\Exception $e) {
-            return response()->json(['message'=>$e->getMessage()],status:422);
+            return response()->json(['message' => $e->getMessage()], status: 422);
         }
     }
 
-    public function getAllEnrollments(){
+    public function getAllEnrollments()
+    {
         return Enrollment::all();
     }
 
@@ -120,8 +121,8 @@ class EnrollmentController extends Controller
                 })
             ],
             'grade_level_id' => 'required|integer|exists:grade_levels,id',
-            'fees'=>'nullable|integer',
-            'discount'=>'nullable|integer|in:0,5,10,15,20,25,30,40,50',
+            'fees' => 'nullable|integer',
+            'discount' => 'nullable|integer|in:0,5,10,15,20,25,30,40,50',
             'classroom_id' => [
                 'nullable',
                 'integer',
@@ -132,7 +133,7 @@ class EnrollmentController extends Controller
                 })
             ],
             'status' => ['required', Rule::in(['active', 'transferred', 'graduated', 'withdrawn'])],
-            'enrollment_type' => ['sometimes', Rule::in(['regular','scholarship'])],
+            'enrollment_type' => ['sometimes', Rule::in(['regular', 'scholarship'])],
         ]);
 
         if ($validator->fails()) {
@@ -140,7 +141,7 @@ class EnrollmentController extends Controller
         }
 
         $validatedData = $validator->validated();
-        
+
         // Auto-fill fees from school's annual_fees if not provided
         if (!isset($validatedData['fees']) || $validatedData['fees'] === 0) {
             $school = \App\Models\School::find($request->school_id);
@@ -235,12 +236,12 @@ class EnrollmentController extends Controller
                 Rule::exists('classrooms', 'id')->where(function ($query) use ($enrollment) {
                     // Ensure new classroom belongs to the correct school and grade
                     $query->where('school_id', $enrollment->school_id)
-                          ->where('grade_level_id', $enrollment->grade_level_id);
+                        ->where('grade_level_id', $enrollment->grade_level_id);
                 }),
             ],
-            'discount' => ['sometimes','nullable','integer','in:0,5,10,15,20,25,30,40,50'],
+            'discount' => ['sometimes', 'nullable', 'integer', 'in:0,5,10,15,20,25,30,40,50'],
             'status' => ['sometimes', 'required', Rule::in(['active', 'transferred', 'graduated', 'withdrawn'])],
-            'enrollment_type' => ['sometimes','required', Rule::in(['regular','scholarship','free'])],
+            'enrollment_type' => ['sometimes', 'required', Rule::in(['regular', 'scholarship', 'free'])],
             'fees' => ['sometimes', 'nullable', 'integer'],
             'grade_level_id' => ['sometimes', 'nullable', 'integer', Rule::exists('grade_levels', 'id')],
             'academic_year' => ['sometimes', 'nullable', 'string'],
@@ -252,15 +253,15 @@ class EnrollmentController extends Controller
         }
 
         $validatedData = $validator->validated();
-        
+
         // Capture old values for logging before any changes
         $oldGradeLevelId = $enrollment->grade_level_id;
         $oldStatus = $enrollment->status;
         $oldClassroomId = $enrollment->classroom_id;
         $oldAcademicYear = $enrollment->academic_year;
         $oldDiscount = $enrollment->discount;
-        
-        if(isset($validatedData['grade_level_id'])){
+
+        if (isset($validatedData['grade_level_id'])) {
             $enrollment->classroom_id = null;
         }
         // Auto-fill fees from school's annual_fees if fees are being updated and not provided
@@ -272,13 +273,13 @@ class EnrollmentController extends Controller
                 $validatedData['fees'] = 0; // Default to 0 if school has no annual fees
             }
         }
-        
+
         // Check if fees were changed and create appropriate ledger entries
         $oldFees = $enrollment->fees;
         $newFees = $validatedData['fees'] ?? $oldFees;
-        
+
         $enrollment->update($validatedData);
-        
+
         // Log changes after update
         $this->logEnrollmentChanges($enrollment, $validatedData, [
             'old_grade_level_id' => $oldGradeLevelId,
@@ -288,7 +289,7 @@ class EnrollmentController extends Controller
             'old_discount' => $oldDiscount,
             'old_fees' => $oldFees,
         ]);
-        
+
         // If fees changed, create ledger entries
         if ($oldFees !== $newFees && $newFees > 0) {
             try {
@@ -351,7 +352,7 @@ class EnrollmentController extends Controller
         // Check if discount changed and create appropriate ledger entries
         $oldDiscount = $enrollment->discount;
         $newDiscount = $validatedData['discount'] ?? $oldDiscount;
-        
+
         if ($oldDiscount !== $newDiscount) {
             try {
                 if ($oldDiscount > 0) {
@@ -378,7 +379,7 @@ class EnrollmentController extends Controller
                         'created_by' => auth()->id(),
                     ]);
                 }
-                
+
                 if ($newDiscount > 0) {
                     // Add new discount entry
                     $newDiscountAmount = ($enrollment->fees * $newDiscount) / 100;
@@ -484,18 +485,18 @@ class EnrollmentController extends Controller
             'classroom',
             'school'
         ])
-        ->join('students', 'enrollments.student_id', '=', 'students.id');
+            ->join('students', 'enrollments.student_id', '=', 'students.id');
 
         // Check if term is numeric for ID search, otherwise search name
         if (ctype_digit($searchTerm)) {
-             $query->where('students.id', '=', $searchTerm);
+            $query->where('students.id', '=', $searchTerm);
         } else {
             $query->where('students.student_name', 'LIKE', "%{$searchTerm}%");
         }
 
         // Order results by academic year descending, then student name
         $query->orderBy('enrollments.academic_year', 'desc')
-              ->orderBy('students.student_name');
+            ->orderBy('students.student_name');
 
         $enrollments = $query->select('enrollments.*')->get();
 
@@ -519,9 +520,9 @@ class EnrollmentController extends Controller
         }
 
         $unassignedEnrollments = Enrollment::with([
-                'student:id,student_name,goverment_id,image',
-                'gradeLevel:id,name',
-            ])
+            'student:id,student_name,goverment_id,image',
+            'gradeLevel:id,name',
+        ])
             ->where('enrollments.school_id', $request->input('school_id'))
             ->where('enrollments.grade_level_id', $request->input('grade_level_id'))
             ->whereNull('enrollments.classroom_id')
@@ -549,10 +550,10 @@ class EnrollmentController extends Controller
         }
 
         $query = Enrollment::with([
-                'student:id,student_name,goverment_id,image',
-                'gradeLevel:id,name',
-                'classroom:id,name,capacity'
-            ])
+            'student:id,student_name,goverment_id,image',
+            'gradeLevel:id,name',
+            'classroom:id,name,capacity'
+        ])
             ->where('enrollments.school_id', $request->input('school_id'))
             ->where('enrollments.grade_level_id', $request->input('grade_level_id'))
             ->whereNotNull('enrollments.classroom_id')
@@ -580,7 +581,7 @@ class EnrollmentController extends Controller
                 'integer',
                 Rule::exists('classrooms', 'id')->where(function ($query) use ($enrollment) {
                     $query->where('school_id', $enrollment->school_id)
-                          ->where('grade_level_id', $enrollment->grade_level_id);
+                        ->where('grade_level_id', $enrollment->grade_level_id);
                 }),
             ],
         ]);
@@ -595,9 +596,9 @@ class EnrollmentController extends Controller
             $classroom = \App\Models\Classroom::find($classroomId);
             if ($classroom) {
                 $currentOccupancy = Enrollment::where('classroom_id', $classroomId)
-                                    ->where('academic_year', $enrollment->academic_year)
-                                    ->where('status', 'active')
-                                    ->count();
+                    ->where('academic_year', $enrollment->academic_year)
+                    ->where('status', 'active')
+                    ->count();
                 if ($currentOccupancy >= $classroom->capacity) {
                     return response()->json(['message' => 'الفصل الدراسي ممتلئ، لا يمكن إضافة المزيد من الطلاب.'], 422);
                 }
@@ -655,7 +656,7 @@ class EnrollmentController extends Controller
             if (isset($newData['grade_level_id']) && $newData['grade_level_id'] != $oldData['old_grade_level_id']) {
                 $oldGradeLevel = \App\Models\GradeLevel::find($oldData['old_grade_level_id']);
                 $newGradeLevel = \App\Models\GradeLevel::find($newData['grade_level_id']);
-                
+
                 EnrollmentLog::logChange(
                     $enrollment->id,
                     $enrollment->student_id,
@@ -702,7 +703,7 @@ class EnrollmentController extends Controller
             if (isset($newData['classroom_id']) && $newData['classroom_id'] != $oldData['old_classroom_id']) {
                 $oldClassroom = \App\Models\Classroom::find($oldData['old_classroom_id']);
                 $newClassroom = \App\Models\Classroom::find($newData['classroom_id']);
-                
+
                 EnrollmentLog::logChange(
                     $enrollment->id,
                     $enrollment->student_id,
@@ -764,7 +765,6 @@ class EnrollmentController extends Controller
                     ]
                 );
             }
-
         } catch (\Exception $e) {
             // Log the error but don't fail the enrollment update
             \Log::error('Failed to log enrollment changes for enrollment ' . $enrollment->id . ': ' . $e->getMessage());
@@ -780,7 +780,7 @@ class EnrollmentController extends Controller
         // abort_unless(auth()->user() && auth()->user()->can('set student enrollment type'), 403, 'ليس لديك صلاحية لتحديد نوع تسجيل الطالب');
 
         $validator = Validator::make($request->all(), [
-            'enrollment_type' => ['required', Rule::in(['regular','scholarship','free'])],
+            'enrollment_type' => ['required', Rule::in(['regular', 'scholarship', 'free'])],
         ]);
 
         if ($validator->fails()) {
@@ -860,11 +860,13 @@ class EnrollmentController extends Controller
 
             // If this is a new deportation subscription (wasn't subscribed before, now is)
             // and deportation_type is provided, create a ledger entry
-            if ($validatedData['deportation'] 
-                && !$oldData['old_deportation'] 
-                && isset($validatedData['deportation_type']) 
-                && $validatedData['deportation_type']) {
-                
+            if (
+                $validatedData['deportation']
+                && !$oldData['old_deportation']
+                && isset($validatedData['deportation_type'])
+                && $validatedData['deportation_type']
+            ) {
+
                 // Determine the fee amount based on deportation type
                 $feeAmount = 0;
                 if ($validatedData['deportation_type'] === 'داخلي') {
@@ -912,11 +914,44 @@ class EnrollmentController extends Controller
     }
 
     /**
+     * Cancel deportation subscription for a specific enrollment and remove its ledger.
+     */
+    public function cancelDeportation(Enrollment $enrollment)
+    {
+        try {
+            DB::beginTransaction();
+
+            // 1. Delete all deportation ledger entries for this enrollment
+            StudentDeportationLedger::where('enrollment_id', $enrollment->id)->delete();
+
+            // 2. Clear deportation status in enrollment
+            $enrollment->update([
+                'deportation' => false,
+                'deportation_type' => null,
+                'deportation_path_id' => null,
+                'nearest_station' => null,
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'تم إلغاء اشتراك الترحيل وحذف السجل المالي بنجاح',
+            ], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'message' => 'حدث خطأ أثناء إلغاء الاشتراك',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Get human-readable status label.
      */
     private function getStatusLabel(string $status): string
     {
-        return match($status) {
+        return match ($status) {
             'active' => 'نشط',
             'transferred' => 'منقول',
             'graduated' => 'متخرج',

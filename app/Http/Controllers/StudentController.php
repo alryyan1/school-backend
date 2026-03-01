@@ -58,6 +58,8 @@ class StudentController extends Controller
             'enrollments.gradeLevel',
             'enrollments.classroom',
             'enrollments.feeInstallments',
+            'enrollments.studentLedgers',
+            'enrollments.deportationLedgers',
             'enrollments.deportationPath',
             'approvedByUser'
         );
@@ -68,22 +70,21 @@ class StudentController extends Controller
 
             $query->where(function ($q) use ($searchTerm) {
                 $q->where('student_name', 'like', "%{$searchTerm}%")
-                  ->orWhere('father_name', 'like', "%{$searchTerm}%")
-                  ->orWhere('father_phone', 'like', "%{$searchTerm}%")
-                  ->orWhere('mother_name', 'like', "%{$searchTerm}%")
-                  ->orWhere('mother_phone', 'like', "%{$searchTerm}%")
-                  ->orWhere('email', 'like', "%{$searchTerm}%")
-                  ->orWhere('goverment_id', 'like', "%{$searchTerm}%");
-                  
+                    ->orWhere('father_name', 'like', "%{$searchTerm}%")
+                    ->orWhere('father_phone', 'like', "%{$searchTerm}%")
+                    ->orWhere('mother_name', 'like', "%{$searchTerm}%")
+                    ->orWhere('mother_phone', 'like', "%{$searchTerm}%")
+                    ->orWhere('email', 'like', "%{$searchTerm}%")
+                    ->orWhere('goverment_id', 'like', "%{$searchTerm}%");
             });
 
             // If numeric, also try matching student id or related enrollment id
             if (ctype_digit($searchTerm)) {
                 $numeric = (int) $searchTerm;
                 $query->orWhere('id', $numeric)
-                      ->orWhereHas('enrollments', function ($en) use ($numeric) {
-                          $en->where('id', $numeric);
-                      });
+                    ->orWhereHas('enrollments', function ($en) use ($numeric) {
+                        $en->where('id', $numeric);
+                    });
             }
         }
 
@@ -236,22 +237,21 @@ class StudentController extends Controller
 
             $query->where(function ($q) use ($searchTerm) {
                 $q->where('student_name', 'like', "%{$searchTerm}%")
-                  ->orWhere('father_name', 'like', "%{$searchTerm}%")
-                  ->orWhere('father_phone', 'like', "%{$searchTerm}%")
-                  ->orWhere('mother_name', 'like', "%{$searchTerm}%")
-                  ->orWhere('mother_phone', 'like', "%{$searchTerm}%")
-                  ->orWhere('email', 'like', "%{$searchTerm}%")
-                  ->orWhere('goverment_id', 'like', "%{$searchTerm}%");
-                  
+                    ->orWhere('father_name', 'like', "%{$searchTerm}%")
+                    ->orWhere('father_phone', 'like', "%{$searchTerm}%")
+                    ->orWhere('mother_name', 'like', "%{$searchTerm}%")
+                    ->orWhere('mother_phone', 'like', "%{$searchTerm}%")
+                    ->orWhere('email', 'like', "%{$searchTerm}%")
+                    ->orWhere('goverment_id', 'like', "%{$searchTerm}%");
             });
 
             // If numeric, also try matching student id or related enrollment id
             if (ctype_digit($searchTerm)) {
                 $numeric = (int) $searchTerm;
                 $query->orWhere('id', $numeric)
-                      ->orWhereHas('enrollments', function ($en) use ($numeric) {
-                          $en->where('id', $numeric);
-                      });
+                    ->orWhereHas('enrollments', function ($en) use ($numeric) {
+                        $en->where('id', $numeric);
+                    });
             }
         }
 
@@ -272,7 +272,7 @@ class StudentController extends Controller
         if ($request->boolean('only_approved')) {
             $query->where('approved', true);
         }
-        
+
         // Only students with no payments filter
         if ($request->boolean('only_no_payments')) {
             $query->whereHas('enrollments', function ($q) {
@@ -281,14 +281,14 @@ class StudentController extends Controller
                 });
             });
         }
-        
+
         // Only deportation enrollments filter
         if ($request->boolean('only_deportation')) {
             $query->whereHas('enrollments', function ($q) {
                 $q->where('deportation', true);
             });
         }
-        
+
         if ($request->filled('school_id')) {
             $query->whereHas('enrollments', function ($q) use ($request) {
                 $q->where('school_id', $request->get('school_id'));
@@ -397,22 +397,21 @@ class StudentController extends Controller
 
             $query->where(function ($q) use ($searchTerm) {
                 $q->where('student_name', 'like', "%{$searchTerm}%")
-                  ->orWhere('father_name', 'like', "%{$searchTerm}%")
-                  ->orWhere('father_phone', 'like', "%{$searchTerm}%")
-                  ->orWhere('mother_name', 'like', "%{$searchTerm}%")
-                  ->orWhere('mother_phone', 'like', "%{$searchTerm}%")
-                  ->orWhere('email', 'like', "%{$searchTerm}%")
-                  ->orWhere('goverment_id', 'like', "%{$searchTerm}%");
-                  
+                    ->orWhere('father_name', 'like', "%{$searchTerm}%")
+                    ->orWhere('father_phone', 'like', "%{$searchTerm}%")
+                    ->orWhere('mother_name', 'like', "%{$searchTerm}%")
+                    ->orWhere('mother_phone', 'like', "%{$searchTerm}%")
+                    ->orWhere('email', 'like', "%{$searchTerm}%")
+                    ->orWhere('goverment_id', 'like', "%{$searchTerm}%");
             });
 
             // If numeric, also try matching student id or related enrollment id
             if (ctype_digit($searchTerm)) {
                 $numeric = (int) $searchTerm;
                 $query->orWhere('id', $numeric)
-                      ->orWhereHas('enrollments', function ($en) use ($numeric) {
-                          $en->where('id', $numeric);
-                      });
+                    ->orWhereHas('enrollments', function ($en) use ($numeric) {
+                        $en->where('id', $numeric);
+                    });
             }
         }
 
@@ -432,7 +431,7 @@ class StudentController extends Controller
         if ($request->boolean('only_approved')) {
             $query->where('approved', true);
         }
-        
+
         // Only students with no payments filter
         if ($request->boolean('only_no_payments')) {
             $query->whereHas('enrollments', function ($q) {
@@ -441,14 +440,14 @@ class StudentController extends Controller
                 });
             });
         }
-        
+
         // Only deportation enrollments filter
         if ($request->boolean('only_deportation')) {
             $query->whereHas('enrollments', function ($q) {
                 $q->where('deportation', true);
             });
         }
-        
+
         if ($request->filled('school_id')) {
             $query->whereHas('enrollments', function ($q) use ($request) {
                 $q->where('school_id', $request->get('school_id'));
@@ -758,7 +757,7 @@ class StudentController extends Controller
         $pdf->setImageScale(PDF_IMAGE_SCALE_RATIO);
         // Set language directionality - IMPORTANT FOR ARABIC
         $pdf->setRTL(true);
-        $font_path = public_path('\fonts').'\arial.ttf';
+        $font_path = public_path('\fonts') . '\arial.ttf';
         TCPDF_FONTS::addTTFfont($font_path);
         $font = 'arial';
 
@@ -797,7 +796,7 @@ class StudentController extends Controller
         $lineHeight = 7; // Height of each row cell
 
         // --- Helper function for Key-Value pairs ---
-        $printRow = function (string $label, ?string $value, bool $isBoldValue = false) use ($pdf, $labelWidth, $valueWidth, $lineHeight,$font) {
+        $printRow = function (string $label, ?string $value, bool $isBoldValue = false) use ($pdf, $labelWidth, $valueWidth, $lineHeight, $font) {
             $pdf->SetFont($font, 'B', 14); // Bold Label
             $pdf->Cell($labelWidth, $lineHeight, $label . ':', 0, 0, 'R'); // Right align label
             $pdf->SetFont($font, $isBoldValue ? 'B' : '', 14); // Value font
@@ -809,7 +808,7 @@ class StudentController extends Controller
         $pdf->Cell(0, 10, 'المعلومات الأساسية', '', 1, 'R'); // Border Bottom, Right align
         $pdf->Ln(3);
         $printRow('الاسم الكامل', $student->student_name, true); // Make name bold
-        $printRow('تاريخ الميلاد', $student->date_of_birth ? $student->date_of_birth: null); // Format date
+        $printRow('تاريخ الميلاد', $student->date_of_birth ? $student->date_of_birth : null); // Format date
         $printRow('الجنس', $student->gender);
         $printRow('المدرسة المرغوبة', $student->wishedSchool ? $student->wishedSchool->name : null);
         $printRow('الرقم الوطني', $student->goverment_id);
@@ -867,7 +866,7 @@ class StudentController extends Controller
         $pdf->Cell(0, 10, 'حالة القبول', 'B', 1, 'R');
         $pdf->Ln(3);
         $printRow('الحالة', $student->approved ? 'مقبول' : 'قيد المراجعة');
-        $printRow('تاريخ القبول', $student->aproove_date ? $student->aproove_date: null); // Check spelling 'aproove_date'
+        $printRow('تاريخ القبول', $student->aproove_date ? $student->aproove_date : null); // Check spelling 'aproove_date'
         $printRow('تم القبول بواسطة (ID)', $student->approved_by_user ? (string)$student->approved_by_user : null);
         // $printRow('تم إرسال الرسالة', $student->message_sent ? 'نعم' : 'لا');
         $pdf->Ln(6);
@@ -960,13 +959,14 @@ class StudentController extends Controller
                 $status = $student->approved ? 'مقبول' : 'قيد المراجعة'; // Using approval status for now
 
                 // Set background fill for row
-                 $pdf->SetFillColor($fill ? 245 : 255);
+                $pdf->SetFillColor($fill ? 245 : 255);
 
                 $pdf->Cell($w['id'], $lineHeight, $student->id, 'LR', 0, 'C', $fill);
                 // Use MultiCell for Name if it might wrap
-                $startX = $pdf->GetX(); $startY = $pdf->GetY();
+                $startX = $pdf->GetX();
+                $startY = $pdf->GetY();
                 $pdf->MultiCell($w['name'], $lineHeight, $student->student_name ?? '-', 0, 'R', $fill, 0, $startX, $startY, true, 0, false, true, $lineHeight, 'M');
-                 $pdf->SetXY($startX + $w['name'], $startY); // Reset position after MultiCell
+                $pdf->SetXY($startX + $w['name'], $startY); // Reset position after MultiCell
 
                 $pdf->Cell($w['gov_id'], $lineHeight, $student->goverment_id ?? '-', 'R', 0, 'C', $fill);
                 $pdf->Cell($w['gender'], $lineHeight, $student->gender ?? '-', 'R', 0, 'C', $fill);
@@ -1180,11 +1180,11 @@ class StudentController extends Controller
         foreach ($selectedColumns as $key => $col) {
             $colLetter = $this->getColumnLetter($col['index']);
             $sheet->getColumnDimension($colLetter)->setAutoSize(true);
-            
+
             // Set minimum and maximum widths based on column type
             $minWidth = 8;
             $maxWidth = 50;
-            
+
             if (in_array($key, ['id'])) {
                 $minWidth = 8;
                 $maxWidth = 12;
@@ -1198,7 +1198,7 @@ class StudentController extends Controller
                 $minWidth = 12;
                 $maxWidth = 15;
             }
-            
+
             $currentWidth = $sheet->getColumnDimension($colLetter)->getWidth();
             if ($currentWidth < $minWidth) {
                 $sheet->getColumnDimension($colLetter)->setWidth($minWidth);
@@ -1253,12 +1253,12 @@ class StudentController extends Controller
 
         if ($request->filled('search')) {
             $searchTerm = $request->input('search');
-            $query->where(function($q) use ($searchTerm) {
+            $query->where(function ($q) use ($searchTerm) {
                 $q->where('student_name', 'like', '%' . $searchTerm . '%')
-                  ->orWhere('father_name', 'like', '%' . $searchTerm . '%')
-                  ->orWhere('mother_name', 'like', '%' . $searchTerm . '%')
-                  ->orWhere('father_phone', 'like', '%' . $searchTerm . '%')
-                  ->orWhere('goverment_id', 'like', '%' . $searchTerm . '%');
+                    ->orWhere('father_name', 'like', '%' . $searchTerm . '%')
+                    ->orWhere('mother_name', 'like', '%' . $searchTerm . '%')
+                    ->orWhere('father_phone', 'like', '%' . $searchTerm . '%')
+                    ->orWhere('goverment_id', 'like', '%' . $searchTerm . '%');
             });
         }
 
@@ -1423,7 +1423,7 @@ class StudentController extends Controller
         if ($request->boolean('only_approved')) {
             $query->where('approved', true);
         }
-        
+
         // Only students with no payments filter
         if ($request->boolean('only_no_payments')) {
             $query->whereHas('enrollments', function ($q) {
@@ -1432,14 +1432,14 @@ class StudentController extends Controller
                 });
             });
         }
-        
+
         // Only deportation enrollments filter
         if ($request->boolean('only_deportation')) {
             $query->whereHas('enrollments', function ($q) {
                 $q->where('deportation', true);
             });
         }
-        
+
         if ($request->filled('school_id')) {
             $query->whereHas('enrollments', function ($q) use ($request) {
                 $q->where('school_id', $request->get('school_id'));
@@ -1464,24 +1464,24 @@ class StudentController extends Controller
             $searchTerm = trim((string) $request->get('search'));
             $query->where(function ($q) use ($searchTerm) {
                 $q->where('student_name', 'like', "%{$searchTerm}%")
-                  ->orWhere('father_name', 'like', "%{$searchTerm}%")
-                  ->orWhere('father_phone', 'like', "%{$searchTerm}%")
-                  ->orWhere('mother_name', 'like', "%{$searchTerm}%")
-                  ->orWhere('mother_phone', 'like', "%{$searchTerm}%")
-                  ->orWhere('email', 'like', "%{$searchTerm}%")
-                  ->orWhere('goverment_id', 'like', "%{$searchTerm}%");
+                    ->orWhere('father_name', 'like', "%{$searchTerm}%")
+                    ->orWhere('father_phone', 'like', "%{$searchTerm}%")
+                    ->orWhere('mother_name', 'like', "%{$searchTerm}%")
+                    ->orWhere('mother_phone', 'like', "%{$searchTerm}%")
+                    ->orWhere('email', 'like', "%{$searchTerm}%")
+                    ->orWhere('goverment_id', 'like', "%{$searchTerm}%");
             });
-            
+
             // If numeric, also try matching student id or related enrollment id
             if (ctype_digit($searchTerm)) {
                 $numeric = (int) $searchTerm;
                 $query->orWhere('id', $numeric)
-                      ->orWhereHas('enrollments', function ($en) use ($numeric) {
-                          $en->where('id', $numeric);
-                      });
+                    ->orWhereHas('enrollments', function ($en) use ($numeric) {
+                        $en->where('id', $numeric);
+                    });
             }
         }
-        
+
         // Reference number filter - search by ledger reference_number
         if ($request->filled('reference_number')) {
             $referenceNumber = trim((string) $request->get('reference_number'));
@@ -1563,7 +1563,7 @@ class StudentController extends Controller
             $selectedColumnKeys = explode(',', $request->input('columns'));
             $selectedColumnKeys = array_filter(array_map('trim', $selectedColumnKeys));
         }
-        
+
         // If no columns specified or empty, use all columns
         if (empty($selectedColumnKeys)) {
             $selectedColumnKeys = array_keys($allColumns);
@@ -1610,7 +1610,7 @@ class StudentController extends Controller
             $headers[$cellRef] = $col['header'];
             $headerCells[] = $cellRef;
         }
-        
+
         foreach ($headers as $cell => $value) {
             $sheet->setCellValue($cell, $value);
         }
@@ -1646,7 +1646,7 @@ class StudentController extends Controller
         // Get ledger summaries for all enrollments
         $enrollmentIds = $students->pluck('enrollments')->flatten()->pluck('id')->unique()->toArray();
         $ledgerSummaries = [];
-        
+
         if (!empty($enrollmentIds)) {
             $summaries = StudentLedger::selectRaw('
                 enrollment_id,
@@ -1656,9 +1656,9 @@ class StudentController extends Controller
                 SUM(CASE WHEN transaction_type = "refund" THEN amount ELSE 0 END) as total_refunds,
                 SUM(CASE WHEN transaction_type = "adjustment" THEN amount ELSE 0 END) as total_adjustments
             ')
-            ->whereIn('enrollment_id', $enrollmentIds)
-            ->groupBy('enrollment_id')
-            ->get();
+                ->whereIn('enrollment_id', $enrollmentIds)
+                ->groupBy('enrollment_id')
+                ->get();
 
             foreach ($summaries as $summary) {
                 $ledgerSummaries[$summary->enrollment_id] = $summary;
@@ -1685,7 +1685,7 @@ class StudentController extends Controller
             foreach ($selectedColumns as $key => $col) {
                 $cellRef = $this->getColumnLetter($col['index']) . $row;
                 $value = '';
-                
+
                 switch ($key) {
                     case 'registration_id':
                         $value = (int)$enrollmentId;
@@ -1718,7 +1718,7 @@ class StudentController extends Controller
                         $value = $enrollment->deportation ? 'نعم' : 'لا';
                         break;
                 }
-                
+
                 $sheet->setCellValue($cellRef, $value);
             }
 
@@ -1841,12 +1841,12 @@ class StudentController extends Controller
         if ($request->boolean('only_approved')) {
             $query->where('approved', true);
         }
-        
+
         // Only deportation enrollments
         $query->whereHas('enrollments', function ($q) {
             $q->where('deportation', true);
         });
-        
+
         // Only students with no payments filter (using deportation ledgers)
         if ($request->boolean('only_no_payments')) {
             $query->whereHas('enrollments', function ($q) {
@@ -1855,7 +1855,7 @@ class StudentController extends Controller
                 });
             });
         }
-        
+
         if ($request->filled('school_id')) {
             $query->whereHas('enrollments', function ($q) use ($request) {
                 $q->where('school_id', $request->get('school_id'));
@@ -1880,7 +1880,7 @@ class StudentController extends Controller
             $searchTerm = $request->get('search');
             $query->where(function ($q) use ($searchTerm) {
                 $q->where('student_name', 'like', "%{$searchTerm}%")
-                  ->orWhere('goverment_id', 'like', "%{$searchTerm}%");
+                    ->orWhere('goverment_id', 'like', "%{$searchTerm}%");
             });
         }
 
@@ -1973,12 +1973,12 @@ class StudentController extends Controller
         if ($request->boolean('only_approved')) {
             $query->where('approved', true);
         }
-        
+
         // Only deportation enrollments
         $query->whereHas('enrollments', function ($q) {
             $q->where('deportation', true);
         });
-        
+
         // Only students with no payments filter (using deportation ledgers)
         if ($request->boolean('only_no_payments')) {
             $query->whereHas('enrollments', function ($q) {
@@ -1987,7 +1987,7 @@ class StudentController extends Controller
                 });
             });
         }
-        
+
         if ($request->filled('school_id')) {
             $query->whereHas('enrollments', function ($q) use ($request) {
                 $q->where('school_id', $request->get('school_id'));
@@ -2012,7 +2012,7 @@ class StudentController extends Controller
             $searchTerm = $request->get('search');
             $query->where(function ($q) use ($searchTerm) {
                 $q->where('student_name', 'like', "%{$searchTerm}%")
-                  ->orWhere('goverment_id', 'like', "%{$searchTerm}%");
+                    ->orWhere('goverment_id', 'like', "%{$searchTerm}%");
             });
         }
 
@@ -2123,7 +2123,7 @@ class StudentController extends Controller
         // Get ledger summaries for all enrollments using deportation ledgers
         $enrollmentIds = $students->pluck('enrollments')->flatten()->pluck('id')->unique()->toArray();
         $ledgerSummaries = [];
-        
+
         if (!empty($enrollmentIds)) {
             $summaries = StudentDeportationLedger::selectRaw('
                 enrollment_id,
@@ -2133,9 +2133,9 @@ class StudentController extends Controller
                 SUM(CASE WHEN transaction_type = "refund" THEN amount ELSE 0 END) as total_refunds,
                 SUM(CASE WHEN transaction_type = "adjustment" THEN amount ELSE 0 END) as total_adjustments
             ')
-            ->whereIn('enrollment_id', $enrollmentIds)
-            ->groupBy('enrollment_id')
-            ->get();
+                ->whereIn('enrollment_id', $enrollmentIds)
+                ->groupBy('enrollment_id')
+                ->get();
 
             foreach ($summaries as $summary) {
                 $ledgerSummaries[$summary->enrollment_id] = $summary;

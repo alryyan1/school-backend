@@ -19,7 +19,7 @@ class AirtelSmsClient implements SmsClient
         $this->baseUrl = rtrim((string)($config['base_url'] ?? 'https://www.airtel.sd'), '/');
         $this->endpoint = '/' . ltrim((string)($config['endpoint'] ?? '/api/rest_send_sms/'), '/');
         $this->apiKey = (string)($config['api_key'] ?? '');
-        $this->defaultSender = (string)($config['default_sender'] ?? 'Jawda');
+        $this->defaultSender = (string)($config['default_sender'] ?? 'Jawdah');
         $this->timeoutSeconds = (int)($config['timeout'] ?? 10);
     }
 
