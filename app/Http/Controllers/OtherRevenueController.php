@@ -79,7 +79,7 @@ class OtherRevenueController extends Controller
             'desc' => 'required|string',
             'amount' => 'required|numeric|min:0.01',
             'revenue_category_id' => 'required|exists:revenue_categories,id',
-            'payment_method' => 'required|in:cash,bank',
+            'payment_method' => 'required|in:cash,bank,fawri,okash',
             'revenue_date' => 'required|date',
         ]);
 
@@ -117,7 +117,7 @@ class OtherRevenueController extends Controller
             'desc' => 'sometimes|required|string',
             'amount' => 'sometimes|required|numeric|min:0.01',
             'revenue_category_id' => 'sometimes|required|exists:revenue_categories,id',
-            'payment_method' => 'sometimes|required|in:cash,bank',
+            'payment_method' => 'sometimes|required|in:cash,bank,fawri,okash',
             'revenue_date' => 'sometimes|required|date',
         ]);
 

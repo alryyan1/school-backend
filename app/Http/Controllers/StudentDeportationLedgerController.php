@@ -266,6 +266,54 @@ class StudentDeportationLedgerController extends Controller
     }
 
     /**
+     * Get deportation ledger entries filtered by payment method and date range.
+     */
+    public function byPaymentMethod(Request $request): JsonResponse
+    {
+        try {
+            $request->validate([
+                'payment_method' => ['required', Rule::in([
+                    StudentDeportationLedger::PAYMENT_METHOD_CASH,
+                    StudentDeportationLedger::PAYMENT_METHOD_BANAK,
+                    StudentDeportationLedger::PAYMENT_METHOD_FAWRI,
+                    StudentDeportationLedger::PAYMENT_METHOD_OCASH,
+                ])],
+                'start_date' => 'nullable|date',
+                'end_date' => 'nullable|date|after_or_equal:start_date',
+            ]);
+
+            $query = StudentDeportationLedger::where('payment_method', $request->payment_method)
+                ->with(['enrollment.student', 'enrollment.school', 'enrollment.gradeLevel', 'enrollment.classroom', 'createdBy'])
+                ->orderBy('transaction_date', 'asc')
+                ->orderBy('id', 'asc');
+
+            if ($request->start_date) {
+                $query->where('transaction_date', '>=', $request->start_date);
+            }
+
+            if ($request->end_date) {
+                $query->where('transaction_date', '<=', $request->end_date);
+            }
+
+            $ledgerEntries = $query->get();
+
+            return response()->json([
+                'data' => StudentDeportationLedgerResource::collection($ledgerEntries),
+                'total' => $ledgerEntries->count(),
+                'summary' => [
+                    'total_amount' => $ledgerEntries->sum('amount'),
+                    'total_entries' => $ledgerEntries->count(),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to fetch deportation ledger entries',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
      * Delete a deportation ledger entry and log it.
      */
     public function destroy(Request $request, $ledgerEntryId): JsonResponse

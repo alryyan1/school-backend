@@ -52,6 +52,36 @@ class StudentController extends Controller
 {
     public function index(Request $request)
     {
+        // Archived students filter
+        if ($request->boolean('archived')) {
+            $query = Student::onlyTrashed()->with(
+                'wishedSchool',
+                'enrollments.school',
+                'enrollments.gradeLevel',
+                'enrollments.classroom',
+                'enrollments.feeInstallments',
+                'enrollments.studentLedgers',
+                'enrollments.deportationLedgers',
+                'enrollments.deportationPath',
+                'approvedByUser'
+            );
+
+            $perPage = $request->get('per_page', 10);
+            $students = $query->orderBy('deleted_at', 'desc')->paginate($perPage);
+
+            return response()->json([
+                'data' => StudentResource::collection($students),
+                'pagination' => [
+                    'current_page' => $students->currentPage(),
+                    'last_page' => $students->lastPage(),
+                    'per_page' => $students->perPage(),
+                    'total' => $students->total(),
+                    'from' => $students->firstItem(),
+                    'to' => $students->lastItem(),
+                ]
+            ]);
+        }
+
         $query = Student::with(
             'wishedSchool',
             'enrollments.school',
@@ -684,7 +714,15 @@ class StudentController extends Controller
 
         $student->delete();
 
-        return response()->json(['message' => 'Student deleted'], 204); // No Content (successful deletion)
+        return response()->json(['message' => 'Student archived'], 200);
+    }
+
+    public function restore($id)
+    {
+        $student = Student::onlyTrashed()->findOrFail($id);
+        $student->restore();
+
+        return response()->json(['message' => 'Student restored successfully']);
     }
 
     /**

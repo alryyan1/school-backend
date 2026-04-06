@@ -90,6 +90,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/revenues-pdf', [StudentController::class, 'revenuesPdf'])->name('revenues.pdf');
     Route::get('/students/search/{id}', [StudentController::class, 'searchById'])->name('students.searchById');
     Route::post('/students/{student}/accept', [StudentController::class, 'accept'])->name('students.accept');
+    Route::post('/students/{id}/restore', [StudentController::class, 'restore'])->name('students.restore');
     // --- School Grade Level Assignment Routes ---
     Route::put('/schools/{school}/grade-levels', [SchoolController::class, 'updateAssignedGradeLevels']);
     Route::get('/schools/{school}/grade-levels', [SchoolController::class, 'getAssignedGradeLevels'])->name('schools.grades.index');
@@ -164,6 +165,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/', [\App\Http\Controllers\StudentDeportationLedgerController::class, 'store']);
         Route::post('/summary', [\App\Http\Controllers\StudentDeportationLedgerController::class, 'summary']);
         Route::get('/student/{studentId}', [\App\Http\Controllers\StudentDeportationLedgerController::class, 'studentLedger']);
+        Route::get('/by-payment-method', [\App\Http\Controllers\StudentDeportationLedgerController::class, 'byPaymentMethod']);
         Route::delete('/{ledgerEntryId}', [\App\Http\Controllers\StudentDeportationLedgerController::class, 'destroy']);
     });
 
