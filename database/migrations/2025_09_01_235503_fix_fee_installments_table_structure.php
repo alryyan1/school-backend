@@ -11,6 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // The create migration already defines enrollment_id on fresh installs
+        if (Schema::hasColumn('fee_installments', 'enrollment_id')) {
+            return;
+        }
+
         Schema::table('fee_installments', function (Blueprint $table) {
             // Drop the existing student_id column and its foreign key
             

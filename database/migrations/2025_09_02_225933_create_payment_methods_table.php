@@ -11,6 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // Renamed to run before payment_transactions; skip on DBs that ran it under the old name
+        if (Schema::hasTable('payment_methods')) {
+            return;
+        }
+
         Schema::create('payment_methods', function (Blueprint $table) {
             $table->id();
             $table->string('name'); // 'cash', 'bank_transfer', 'check', 'credit_card', 'online'
