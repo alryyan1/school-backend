@@ -33,6 +33,7 @@ use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\ExpenseCategoryController;
 use App\Http\Controllers\UltramsgController;
 use App\Http\Controllers\DeportationPathController;
+use App\Http\Controllers\DeportationFeeController;
 
 /*
 |--------------------------------------------------------------------------
@@ -128,6 +129,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // --- ENROLLMENT ROUTES ---
     Route::apiResource('/enrollments', EnrollmentController::class);
     Route::apiResource('/deportation-paths', DeportationPathController::class);
+    Route::get('/deportation-fees', [DeportationFeeController::class, 'index']);
+    Route::put('/deportation-fees', [DeportationFeeController::class, 'update']);
     Route::get('/enrollable-students', [EnrollmentController::class, 'getEnrollableStudents']);
     Route::get('/enrollments/search', [EnrollmentController::class, 'search']);
     Route::get('/unassigned-students-for-grade', [EnrollmentController::class, 'getUnassignedStudentsForGrade']);

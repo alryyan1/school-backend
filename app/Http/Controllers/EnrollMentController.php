@@ -828,7 +828,7 @@ class EnrollmentController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'deportation' => 'required|boolean',
-            'deportation_type' => ['nullable', Rule::in(['داخلي', 'خارجي'])],
+            'deportation_type' => ['nullable', Rule::in(\App\Models\DeportationFee::TYPES)],
             'deportation_path_id' => 'nullable|exists:deportation_paths,id',
             'nearest_station' => 'nullable|string|max:255',
         ]);
@@ -868,12 +868,8 @@ class EnrollmentController extends Controller
             ) {
 
                 // Determine the fee amount based on deportation type
-                $feeAmount = 0;
-                if ($validatedData['deportation_type'] === 'داخلي') {
-                    $feeAmount = 400000;
-                } elseif ($validatedData['deportation_type'] === 'خارجي') {
-                    $feeAmount = 500000;
-                }
+                // (from settings: deportation_fees table)
+                $feeAmount = \App\Models\DeportationFee::amountFor($validatedData['deportation_type']);
 
                 if ($feeAmount > 0) {
                     // Create deportation ledger entry
